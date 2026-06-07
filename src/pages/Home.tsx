@@ -8,6 +8,7 @@ import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import OrderDetailModal from '../components/modals/OrderDetailModal';
 import CreateOrderModal from '../components/modals/CreateOrderModal';
 import RecipeModal from '../components/modals/RecipeModal';
+import PrintPreviewModal from '../components/modals/PrintPreviewModal';
 import { WarningPanel } from '../components/panels/WarningPanel';
 import { IngredientPanel } from '../components/panels/IngredientPanel';
 import { RecipePanel } from '../components/panels/RecipePanel';
@@ -23,6 +24,7 @@ const Home: React.FC = () => {
     showRecipePanel,
     showRecipeModal,
     showSchedulePanel,
+    showPrintPreview,
     setShowWarningPanel,
     setShowIngredientPanel,
     setShowCreateOrderModal,
@@ -124,6 +126,8 @@ const Home: React.FC = () => {
       {showSchedulePanel && (
         <SchedulePanel onClose={() => setShowSchedulePanel(false)} />
       )}
+
+      {showPrintPreview && <PrintPreviewModal />}
     </div>
   );
 };

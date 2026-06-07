@@ -169,3 +169,232 @@ body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
 }
+
+@media print {
+  body {
+    background: white !important;
+    background-image: none !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  .min-h-screen {
+    min-height: auto !important;
+  }
+
+  header,
+  main,
+  nav,
+  aside,
+  .bg-black\/50,
+  .backdrop-blur-sm {
+    display: none !important;
+  }
+
+  .print\\:hidden {
+    display: none !important;
+  }
+
+  .print\\:block {
+    display: block !important;
+  }
+
+  .print\\:flex {
+    display: flex !important;
+  }
+
+  .print\\:p-0 {
+    padding: 0 !important;
+  }
+
+  .print\\:pt-6 {
+    padding-top: 1.5rem !important;
+  }
+
+  .print\\:max-h-none {
+    max-height: none !important;
+  }
+
+  .print\\:rounded-none {
+    border-radius: 0 !important;
+  }
+
+  .print\\:shadow-none {
+    box-shadow: none !important;
+  }
+
+  .print\\:animate-none {
+    animation: none !important;
+  }
+
+  .print\\:overflow-visible {
+    overflow: visible !important;
+  }
+
+  .fixed {
+    position: static !important;
+    inset: auto !important;
+  }
+
+  .z-50 {
+    z-index: auto !important;
+  }
+
+  .max-w-3xl {
+    max-width: 100% !important;
+  }
+
+  .bg-white {
+    background: white !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+
+  .mb-8 {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  table {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .text-incense-500 {
+    color: #666 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-incense-800 {
+    color: #333 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-warning-critical {
+    color: #C62828 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-sandal-500 {
+    color: #FF8F00 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-bamboo-500 {
+    color: #558B2F !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-incense-50 {
+    background-color: #FAF7F2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-red-50 {
+    background-color: #FEF2F2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-amber-50 {
+    background-color: #FFFBEB !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-blue-50 {
+    background-color: #EFF6FF !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-bamboo-50 {
+    background-color: #F1F8E9 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-sandal-50 {
+    background-color: #FFF3E0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .border-incense-200,
+  .border-incense-300,
+  .border-sandal-300,
+  .border-bamboo-300,
+  .border-red-300 {
+    border-color: #ddd !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .border-l-red-500 {
+    border-left-color: #C62828 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .border-l-amber-500 {
+    border-left-color: #FF8F00 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .border-l-blue-500 {
+    border-left-color: #1565C0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-red-100 {
+    background-color: #FEE2E2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-amber-100 {
+    background-color: #FEF3C7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bg-green-100 {
+    background-color: #D1FAE5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-red-700 {
+    color: #B91C1C !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-amber-700 {
+    color: #B45309 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-green-700 {
+    color: #047857 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

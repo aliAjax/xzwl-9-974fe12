@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, User, Clock, CheckCircle, Circle, Play, AlertTriangle, ChevronRight } from 'lucide-react';
+import { X, Calendar, User, Clock, CheckCircle, Circle, Play, AlertTriangle, ChevronRight, Printer } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { ProgressBar } from '../common/ProgressBar';
 import { Badge } from '../common/Badge';
@@ -15,6 +15,7 @@ const OrderDetailModal: React.FC = () => {
     getOrderWarnings,
     moveOrderToStep,
     completeOrder,
+    setShowPrintPreview,
   } = useAppStore();
 
   const order = useAppStore((state) => state.orders.find((o) => o.id === selectedOrderId));
@@ -69,6 +70,10 @@ const OrderDetailModal: React.FC = () => {
     high: '高优先级',
     medium: '中优先级',
     low: '低优先级',
+  };
+
+  const handlePrintOrder = () => {
+    setShowPrintPreview(true);
   };
 
   return (
@@ -263,7 +268,10 @@ const OrderDetailModal: React.FC = () => {
           <button onClick={() => setSelectedOrderId(null)} className="btn-secondary">
             关闭
           </button>
-          <button className="btn-primary">打印工单</button>
+          <button onClick={handlePrintOrder} className="btn-primary flex items-center gap-2">
+            <Printer size={16} />
+            打印工单
+          </button>
         </div>
       </div>
     </div>

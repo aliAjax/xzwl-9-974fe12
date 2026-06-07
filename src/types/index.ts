@@ -107,6 +107,7 @@ export interface AppState {
   showRecipePanel: boolean;
   showRecipeModal: boolean;
   showSchedulePanel: boolean;
+  showPrintPreview: boolean;
   editingRecipeId: string | null;
 }
 
@@ -129,6 +130,7 @@ export interface AppActions {
   setShowRecipePanel: (show: boolean) => void;
   setShowRecipeModal: (show: boolean) => void;
   setShowSchedulePanel: (show: boolean) => void;
+  setShowPrintPreview: (show: boolean) => void;
   setEditingRecipeId: (id: string | null) => void;
   createRecipe: (data: RecipeFormData) => Recipe;
   updateRecipe: (id: string, data: RecipeFormData) => Recipe;
