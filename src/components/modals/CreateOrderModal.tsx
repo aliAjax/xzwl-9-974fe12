@@ -1,9 +1,19 @@
 import React, { useState, useMemo } from 'react';
-import { X, Plus, Calendar, User, Clock, AlertTriangle } from 'lucide-react';
+import { X, Plus, Calendar, User, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { formatDateChinese, getToday, addDaysToDate, daysBetween } from '../../utils/dateUtils';
-import { Priority, Recipe, STEP_ORDER, STEP_CONFIG } from '../../types';
+import { formatDateChinese, getToday, addDaysToDate, daysBetween, isDateBefore } from '../../utils/dateUtils';
+import { Priority, Recipe, STEP_ORDER, STEP_CONFIG, StepType } from '../../types';
 import { clsx } from 'clsx';
+
+interface StepSchedulePreview {
+  stepType: StepType;
+  name: string;
+  startDate: string;
+  endDate: string;
+  durationDays: number;
+  color: string;
+  isOverdue: boolean;
+}
 
 const customerSuggestions = [
   '北京静心斋',
@@ -51,6 +61,45 @@ const CreateOrderModal: React.FC = () => {
   }, [estimatedStartDate]);
 
   const isDeliveryDateTooEarly = daysToStart < 0;
+
+  const stepSchedules = useMemo((): StepSchedulePreview[] => {
+    if (!selectedRecipe) return [];
+
+    const stepDurations: Record<StepType, number> = {
+      kneading: 2,
+      shaping: 3,
+      drying: selectedRecipe.dryingDays,
+      cellaring: selectedRecipe.cellaringDays,
+      packaging: 2,
+    };
+
+    const today = getToday();
+    let currentEndDate = deliveryDate;
+    const schedules: StepSchedulePreview[] = [];
+
+    for (let i = STEP_ORDER.length - 1; i >= 0; i--) {
+      const stepType = STEP_ORDER[i];
+      const duration = stepDurations[stepType];
+      const startDate = addDaysToDate(currentEndDate, -duration);
+      const config = STEP_CONFIG[stepType];
+
+      schedules.unshift({
+        stepType,
+        name: config.name,
+        startDate,
+        endDate: currentEndDate,
+        durationDays: duration,
+        color: config.color,
+        isOverdue: isDateBefore(startDate, today),
+      });
+
+      currentEndDate = startDate;
+    }
+
+    return schedules;
+  }, [selectedRecipe, deliveryDate]);
+
+  const hasOverdueSteps = stepSchedules.some((s) => s.isOverdue);
 
   const filteredCustomers = customerSuggestions.filter((c) =>
     c.toLowerCase().includes(customerName.toLowerCase())
@@ -230,27 +279,26 @@ const CreateOrderModal: React.FC = () => {
               type="date"
               value={deliveryDate}
               onChange={(e) => setDeliveryDate(e.target.value)}
-              min={getToday()}
               className="w-full px-4 py-3 bg-white border border-incense-200 rounded-lg focus:ring-2 focus:ring-incense-500 focus:border-transparent outline-none transition-all"
               required
             />
             {selectedRecipe && (
               <div className={clsx(
                 'text-sm flex items-center gap-1',
-                isDeliveryDateTooEarly ? 'text-red-500' : 'text-incense-500'
+                isDeliveryDateTooEarly ? 'text-red-600' : 'text-incense-500'
               )}>
                 {isDeliveryDateTooEarly ? (
                   <>
                     <AlertTriangle size={14} />
-                    <span>
-                      交付日期过紧！该香方生产周期约 {estimatedProductionDays} 天，需在 {formatDateChinese(estimatedStartDate)} 前开工
+                    <span className="font-medium">
+                      交付日期过紧！该香方生产周期约 {estimatedProductionDays} 天，预计需在 {formatDateChinese(estimatedStartDate)} 前开工（已逾期 {Math.abs(daysToStart)} 天）
                     </span>
                   </>
                 ) : (
                   <>
                     <Clock size={14} />
                     <span>
-                      预计开工日期: {formatDateChinese(estimatedStartDate)}，生产周期约 {estimatedProductionDays} 天
+                      预计开工日期: {formatDateChinese(estimatedStartDate)}，距今天还有 {daysToStart} 天，生产周期约 {estimatedProductionDays} 天
                     </span>
                   </>
                 )}
@@ -281,34 +329,81 @@ const CreateOrderModal: React.FC = () => {
             </div>
           </div>
 
-          {selectedRecipe && (
+          {selectedRecipe && stepSchedules.length > 0 && (
             <div className="card p-4 bg-incense-100/50">
-              <h4 className="font-semibold text-incense-800 mb-3">生产步骤预览</h4>
-              <div className="flex items-center gap-1 text-xs">
-                {STEP_ORDER.map((stepType, index) => {
-                  const config = STEP_CONFIG[stepType];
-                  const duration = stepType === 'drying'
-                    ? selectedRecipe.dryingDays
-                    : stepType === 'cellaring'
-                      ? selectedRecipe.cellaringDays
-                      : stepType === 'kneading' || stepType === 'packaging'
-                        ? 2
-                        : 3;
-                  return (
-                    <React.Fragment key={stepType}>
-                      <div
-                        className="flex-1 px-2 py-2 rounded text-center text-white"
-                        style={{ backgroundColor: config.color }}
-                      >
-                        <div>{config.name}</div>
-                        <div className="text-white/80">{duration}天</div>
-                      </div>
-                      {index < STEP_ORDER.length - 1 && (
-                        <div className="text-incense-400">→</div>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-incense-800">预计排期预览</h4>
+                <div className="text-xs text-incense-500">
+                  总周期: {estimatedProductionDays}天
+                </div>
+              </div>
+
+              {hasOverdueSteps && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-red-700">
+                        排期冲突警告
+                      </p>
+                      <p className="text-xs text-red-600 mt-1">
+                        预计开工日期（{formatDateChinese(estimatedStartDate)}）早于今日（{formatDateChinese(getToday())}），
+                        需立即安排生产或调整交付日期。逾期天数: {Math.abs(daysToStart)}天
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {stepSchedules.map((step, index) => (
+                  <div key={step.stepType} className="flex items-center gap-3">
+                    <div
+                      className={clsx(
+                        'w-24 py-2 px-3 rounded-lg text-center text-white text-sm font-medium flex-shrink-0',
+                        step.isOverdue && 'ring-2 ring-red-400 ring-offset-1'
                       )}
-                    </React.Fragment>
-                  );
-                })}
+                      style={{ backgroundColor: step.color }}
+                    >
+                      {step.name}
+                    </div>
+                    <div className="flex-1 flex items-center gap-2">
+                      <div className={clsx(
+                        'text-sm',
+                        step.isOverdue ? 'text-red-600 font-medium' : 'text-incense-700'
+                      )}>
+                        {formatDateChinese(step.startDate)}
+                      </div>
+                      <ChevronRight size={14} className="text-incense-400" />
+                      <div className={clsx(
+                        'text-sm',
+                        step.isOverdue ? 'text-red-600 font-medium' : 'text-incense-700'
+                      )}>
+                        {formatDateChinese(step.endDate)}
+                      </div>
+                    </div>
+                    <div className={clsx(
+                      'text-xs px-2 py-1 rounded',
+                      step.isOverdue
+                        ? 'bg-red-100 text-red-600'
+                        : 'bg-incense-200 text-incense-600'
+                    )}>
+                      {step.durationDays}天
+                    </div>
+                    {step.isOverdue && (
+                      <span className="text-xs text-red-500 font-medium">已逾期</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-incense-200 flex items-center justify-between text-xs">
+                <div className="text-incense-600">
+                  <span className="font-medium">开工:</span> {formatDateChinese(stepSchedules[0]?.startDate)}
+                </div>
+                <div className="text-incense-600">
+                  <span className="font-medium">完工:</span> {formatDateChinese(stepSchedules[stepSchedules.length - 1]?.endDate)}
+                </div>
               </div>
             </div>
           )}
