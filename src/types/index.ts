@@ -216,6 +216,7 @@ export interface AppActions {
   getOrdersByStep: (stepType: StepType) => Order[];
   getOrdersByDate: (date: string) => Order[];
   getCraftsmanTasks: (craftsmanId: string) => { order: Order; step: ProductionStep }[];
+  resetToDefault: () => void;
 }
 
 export interface AppState {

@@ -1,0 +1,185 @@
+import { Order, Recipe, IngredientBatch, Warning, ViewType, CustomerDeliveryBoardState } from '../types';
+import { mockOrders } from '../data/mockOrders';
+import { mockRecipes } from '../data/mockRecipes';
+import { mockIngredients } from '../data/mockIngredients';
+import { calculateAllWarnings } from './warningUtils';
+
+const STORAGE_KEY = 'xzwl-app-state';
+const CURRENT_VERSION = 2;
+
+export interface PersistentViewPreferences {
+  currentView: ViewType;
+  selectedDate: string;
+  showIngredientPanel: boolean;
+  showWarningPanel: boolean;
+  showRecipePanel: boolean;
+  showSchedulePanel: boolean;
+  showPurchaseSuggestion: boolean;
+  deliveryBoard: CustomerDeliveryBoardState;
+}
+
+export interface PersistentAppData {
+  version: number;
+  orders: Order[];
+  recipes: Recipe[];
+  ingredients: IngredientBatch[];
+  warnings: Warning[];
+  viewPreferences: PersistentViewPreferences;
+  savedAt: string;
+}
+
+export interface DefaultDataResult {
+  orders: Order[];
+  recipes: Recipe[];
+  ingredients: IngredientBatch[];
+  warnings: Warning[];
+  viewPreferences: PersistentViewPreferences;
+}
+
+type MigrationFn = (data: any) => any;
+
+const migrations: Record<number, MigrationFn> = {
+  1: (data: any) => {
+    console.log('[Storage] Running migration v1 -> v2');
+    return {
+      ...data,
+      version: 2,
+      viewPreferences: {
+        ...data.viewPreferences,
+        deliveryBoard: data.viewPreferences.deliveryBoard || {
+          showCompletedOrders: false,
+          sortBy: 'deliveryDate',
+          filterRiskLevel: 'all',
+          expandedCustomers: [],
+        },
+      },
+    };
+  },
+};
+
+const defaultViewPreferences: PersistentViewPreferences = {
+  currentView: 'kanban',
+  selectedDate: new Date().toISOString().split('T')[0],
+  showIngredientPanel: false,
+  showWarningPanel: false,
+  showRecipePanel: false,
+  showSchedulePanel: false,
+  showPurchaseSuggestion: false,
+  deliveryBoard: {
+    showCompletedOrders: false,
+    sortBy: 'deliveryDate',
+    filterRiskLevel: 'all',
+    expandedCustomers: [],
+  },
+};
+
+export const getDefaultData = (): DefaultDataResult => {
+  const initialWarnings = calculateAllWarnings(mockOrders, mockIngredients, mockRecipes);
+  return {
+    orders: mockOrders,
+    recipes: mockRecipes,
+    ingredients: mockIngredients,
+    warnings: initialWarnings,
+    viewPreferences: { ...defaultViewPreferences },
+  };
+};
+
+export const saveToStorage = (data: Omit<PersistentAppData, 'version' | 'savedAt'>): void => {
+  try {
+    const persistentData: PersistentAppData = {
+      ...data,
+      version: CURRENT_VERSION,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(persistentData));
+    console.log('[Storage] Data saved successfully');
+  } catch (error) {
+    console.error('[Storage] Failed to save data:', error);
+  }
+};
+
+export const loadFromStorage = (): DefaultDataResult | null => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      console.log('[Storage] No saved data found, using defaults');
+      return null;
+    }
+
+    let data: any = JSON.parse(raw);
+
+    if (!data.version || data.version < CURRENT_VERSION) {
+      console.log(`[Storage] Migrating data from v${data.version || 0} to v${CURRENT_VERSION}`);
+      data = runMigrations(data);
+    }
+
+    if (data.version !== CURRENT_VERSION) {
+      console.warn('[Storage] Migration failed, falling back to defaults');
+      return null;
+    }
+
+    console.log('[Storage] Data loaded successfully, version:', data.version);
+    return {
+      orders: data.orders,
+      recipes: data.recipes,
+      ingredients: data.ingredients,
+      warnings: data.warnings,
+      viewPreferences: data.viewPreferences,
+    };
+  } catch (error) {
+    console.error('[Storage] Failed to load data:', error);
+    return null;
+  }
+};
+
+const runMigrations = (data: any): any => {
+  let migratedData = { ...data };
+  const startVersion = migratedData.version || 0;
+
+  for (let v = startVersion; v < CURRENT_VERSION; v++) {
+    const migration = migrations[v];
+    if (migration) {
+      try {
+        migratedData = migration(migratedData);
+      } catch (error) {
+        console.error(`[Storage] Migration to v${v + 1} failed:`, error);
+        throw error;
+      }
+    }
+  }
+
+  return migratedData;
+};
+
+export const clearStorage = (): void => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    console.log('[Storage] Data cleared successfully');
+  } catch (error) {
+    console.error('[Storage] Failed to clear data:', error);
+  }
+};
+
+export const getStorageInfo = (): { hasData: boolean; version: number; savedAt?: string } => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return { hasData: false, version: 0 };
+    }
+    const data = JSON.parse(raw);
+    return {
+      hasData: true,
+      version: data.version || 0,
+      savedAt: data.savedAt,
+    };
+  } catch {
+    return { hasData: false, version: 0 };
+  }
+};
+
+export const migrateData = (): void => {
+  const data = loadFromStorage();
+  if (data) {
+    saveToStorage(data);
+  }
+};

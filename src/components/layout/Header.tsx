@@ -1,12 +1,31 @@
-import React from 'react';
-import { LayoutDashboard, Calendar, Package, Bell, User, Users } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { LayoutDashboard, Calendar, Package, Bell, User, Users, RotateCcw, Database } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { ViewType } from '../../types';
 import { formatFullDateChinese, getToday } from '../../utils/dateUtils';
+import { getStorageInfo } from '../../utils/storage';
 import { clsx } from 'clsx';
 
 export const Header: React.FC = () => {
-  const { currentView, setCurrentView, warnings, setShowWarningPanel } = useAppStore();
+  const { currentView, setCurrentView, warnings, setShowWarningPanel, resetToDefault } = useAppStore();
+  const [showStorageMenu, setShowStorageMenu] = useState(false);
+  const [storageInfo, setStorageInfo] = useState(getStorageInfo());
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowStorageMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    setStorageInfo(getStorageInfo());
+  }, [showStorageMenu]);
   const unresolvedWarnings = warnings.filter((w) => !w.isResolved);
   const criticalCount = unresolvedWarnings.filter((w) => w.level === 'critical').length;
 
@@ -70,6 +89,52 @@ export const Header: React.FC = () => {
             <button className="p-2 rounded-lg hover:bg-incense-700 transition-colors">
               <Package size={20} />
             </button>
+
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowStorageMenu(!showStorageMenu)}
+                className="p-2 rounded-lg hover:bg-incense-700 transition-colors"
+                title="数据管理"
+              >
+                <Database size={20} />
+              </button>
+
+              {showStorageMenu && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-incense-100 py-2 z-50">
+                  <div className="px-4 py-2 border-b border-incense-100">
+                    <p className="text-sm font-medium text-incense-800">数据状态</p>
+                    <p className="text-xs text-incense-500 mt-1">
+                      版本: v{storageInfo.version}
+                      {storageInfo.hasData && storageInfo.savedAt && (
+                        <span className="ml-2">
+                          保存于: {new Date(storageInfo.savedAt).toLocaleString('zh-CN')}
+                        </span>
+                      )}
+                    </p>
+                    {!storageInfo.hasData && (
+                      <p className="text-xs text-incense-400 mt-1">使用默认mock数据</p>
+                    )}
+                  </div>
+                  <div className="px-2 py-1">
+                    <button
+                      onClick={() => {
+                        const confirmed = window.confirm(
+                          '确定要恢复默认数据吗？\n\n这将清除所有本地保存的订单、生产进度、预警处理状态和视图偏好，恢复为初始mock数据。\n\n此操作不可撤销！'
+                        );
+                        if (confirmed) {
+                          resetToDefault();
+                          setShowStorageMenu(false);
+                        }
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-warning-critical hover:bg-warning-50 rounded-md transition-colors text-left"
+                    >
+                      <RotateCcw size={16} />
+                      <span>恢复默认数据</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="flex items-center gap-2 pl-4 border-l border-incense-700">
               <div className="w-8 h-8 bg-incense-600 rounded-full flex items-center justify-center">

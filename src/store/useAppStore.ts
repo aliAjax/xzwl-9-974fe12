@@ -24,11 +24,72 @@ import { calculateAllWarnings } from '../utils/warningUtils';
 import { calculatePurchaseSuggestions } from '../utils/purchaseUtils';
 import { getToday, addDaysToDate, isDateBefore, daysBetween } from '../utils/dateUtils';
 import { applyStepAdjustment, validateStepAdjustment } from '../utils/scheduleUtils';
+import {
+  loadFromStorage,
+  saveToStorage,
+  getDefaultData,
+  clearStorage,
+} from '../utils/storage';
 
 type AppStore = AppState & AppActions;
 
-const initialWarnings = calculateAllWarnings(mockOrders, mockIngredients, mockRecipes);
-const initialPurchaseSuggestions = calculatePurchaseSuggestions(mockOrders, mockIngredients, mockRecipes);
+const getInitialState = (): AppState => {
+  const savedData = loadFromStorage();
+  const defaultData = getDefaultData();
+
+  const data = savedData || defaultData;
+  const purchaseSuggestions = calculatePurchaseSuggestions(
+    data.orders,
+    data.ingredients,
+    data.recipes
+  );
+
+  return {
+    orders: data.orders,
+    recipes: data.recipes,
+    ingredients: data.ingredients,
+    craftsmen: mockCraftsmen,
+    warnings: data.warnings,
+    currentView: data.viewPreferences.currentView,
+    selectedDate: data.viewPreferences.selectedDate,
+    selectedOrderId: null,
+    showIngredientPanel: data.viewPreferences.showIngredientPanel,
+    showWarningPanel: data.viewPreferences.showWarningPanel,
+    showCreateOrderModal: false,
+    showRecipePanel: data.viewPreferences.showRecipePanel,
+    showRecipeModal: false,
+    showSchedulePanel: data.viewPreferences.showSchedulePanel,
+    showPrintPreview: false,
+    showPurchaseSuggestion: data.viewPreferences.showPurchaseSuggestion,
+    showScheduleAdjustModal: false,
+    scheduleAdjustOrderId: null,
+    printOrderId: null,
+    editingRecipeId: null,
+    purchaseSuggestions,
+    deliveryBoard: data.viewPreferences.deliveryBoard,
+  };
+};
+
+const initialState = getInitialState();
+
+const saveState = (state: AppState) => {
+  saveToStorage({
+    orders: state.orders,
+    recipes: state.recipes,
+    ingredients: state.ingredients,
+    warnings: state.warnings,
+    viewPreferences: {
+      currentView: state.currentView,
+      selectedDate: state.selectedDate,
+      showIngredientPanel: state.showIngredientPanel,
+      showWarningPanel: state.showWarningPanel,
+      showRecipePanel: state.showRecipePanel,
+      showSchedulePanel: state.showSchedulePanel,
+      showPurchaseSuggestion: state.showPurchaseSuggestion,
+      deliveryBoard: state.deliveryBoard,
+    },
+  });
+};
 
 const generateOrderId = (): string => `order-${Date.now().toString().slice(-6)}`;
 const generateOrderNo = (): string => {
@@ -41,55 +102,50 @@ const generateOrderNo = (): string => {
 const generateRecipeId = (): string => `recipe-${Date.now().toString().slice(-6)}`;
 
 export const useAppStore = create<AppStore>((set, get) => ({
-  orders: mockOrders,
-  recipes: mockRecipes,
-  ingredients: mockIngredients,
-  craftsmen: mockCraftsmen,
-  warnings: initialWarnings,
-  currentView: 'kanban',
-  selectedDate: getToday(),
-  selectedOrderId: null,
-  showIngredientPanel: false,
-  showWarningPanel: false,
-  showCreateOrderModal: false,
-  showRecipePanel: false,
-  showRecipeModal: false,
-  showSchedulePanel: false,
-  showPrintPreview: false,
-  showPurchaseSuggestion: false,
-  showScheduleAdjustModal: false,
-  scheduleAdjustOrderId: null,
-  printOrderId: null,
-  editingRecipeId: null,
-  purchaseSuggestions: initialPurchaseSuggestions,
-  deliveryBoard: {
-    showCompletedOrders: false,
-    sortBy: 'deliveryDate',
-    filterRiskLevel: 'all',
-    expandedCustomers: [],
+  ...initialState,
+
+  setCurrentView: (view: ViewType) => {
+    set({ currentView: view });
+    saveState(get());
   },
 
-  setCurrentView: (view: ViewType) => set({ currentView: view }),
-
-  setSelectedDate: (date: string) => set({ selectedDate: date }),
+  setSelectedDate: (date: string) => {
+    set({ selectedDate: date });
+    saveState(get());
+  },
 
   setSelectedOrderId: (id: string | null) => set({ selectedOrderId: id }),
 
-  setShowIngredientPanel: (show: boolean) => set({ showIngredientPanel: show }),
+  setShowIngredientPanel: (show: boolean) => {
+    set({ showIngredientPanel: show });
+    saveState(get());
+  },
 
-  setShowWarningPanel: (show: boolean) => set({ showWarningPanel: show }),
+  setShowWarningPanel: (show: boolean) => {
+    set({ showWarningPanel: show });
+    saveState(get());
+  },
 
   setShowCreateOrderModal: (show: boolean) => set({ showCreateOrderModal: show }),
 
-  setShowRecipePanel: (show: boolean) => set({ showRecipePanel: show }),
+  setShowRecipePanel: (show: boolean) => {
+    set({ showRecipePanel: show });
+    saveState(get());
+  },
 
   setShowRecipeModal: (show: boolean) => set({ showRecipeModal: show }),
 
-  setShowSchedulePanel: (show: boolean) => set({ showSchedulePanel: show }),
+  setShowSchedulePanel: (show: boolean) => {
+    set({ showSchedulePanel: show });
+    saveState(get());
+  },
 
   setShowPrintPreview: (show: boolean) => set({ showPrintPreview: show }),
 
-  setShowPurchaseSuggestion: (show: boolean) => set({ showPurchaseSuggestion: show }),
+  setShowPurchaseSuggestion: (show: boolean) => {
+    set({ showPurchaseSuggestion: show });
+    saveState(get());
+  },
 
   setPrintOrderId: (id: string | null) => set({ printOrderId: id }),
 
@@ -99,22 +155,28 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setScheduleAdjustOrderId: (id: string | null) => set({ scheduleAdjustOrderId: id }),
 
-  setShowCompletedOrders: (show: boolean) =>
+  setShowCompletedOrders: (show: boolean) => {
     set((state) => ({
       deliveryBoard: { ...state.deliveryBoard, showCompletedOrders: show },
-    })),
+    }));
+    saveState(get());
+  },
 
-  setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) =>
+  setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) => {
     set((state) => ({
       deliveryBoard: { ...state.deliveryBoard, sortBy },
-    })),
+    }));
+    saveState(get());
+  },
 
-  setFilterRiskLevel: (level: RiskLevel | 'all') =>
+  setFilterRiskLevel: (level: RiskLevel | 'all') => {
     set((state) => ({
       deliveryBoard: { ...state.deliveryBoard, filterRiskLevel: level },
-    })),
+    }));
+    saveState(get());
+  },
 
-  toggleCustomerExpand: (customerName: string) =>
+  toggleCustomerExpand: (customerName: string) => {
     set((state) => {
       const expanded = state.deliveryBoard.expandedCustomers;
       const isExpanded = expanded.includes(customerName);
@@ -126,7 +188,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
             : [...expanded, customerName],
         },
       };
-    }),
+    });
+    saveState(get());
+  },
 
   getCustomerOrderSummaries: (): CustomerOrderSummary[] => {
     const { orders, getOrderWarnings } = get();
@@ -242,6 +306,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       editingRecipeId: null,
     }));
 
+    saveState(get());
     return newRecipe;
   },
 
@@ -264,6 +329,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     get().recalculateWarnings();
     get().recalculatePurchaseSuggestions();
+    saveState(get());
 
     return updatedRecipe;
   },
@@ -274,6 +340,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }));
     get().recalculateWarnings();
     get().recalculatePurchaseSuggestions();
+    saveState(get());
   },
 
   createOrder: (data: CreateOrderData): Order => {
@@ -348,6 +415,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     get().recalculateWarnings();
     get().recalculatePurchaseSuggestions();
+    saveState(get());
 
     return newOrder;
   },
@@ -367,6 +435,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }));
     get().recalculateWarnings();
     get().recalculatePurchaseSuggestions();
+    saveState(get());
   },
 
   assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => {
@@ -382,6 +451,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         };
       }),
     }));
+    saveState(get());
   },
 
   moveOrderToStep: (orderId: string, targetStepType: StepType) => {
@@ -449,6 +519,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     get().recalculateWarnings();
     get().recalculatePurchaseSuggestions();
+    saveState(get());
   },
 
   updateProductionStep: (orderId: string, stepId: string, updates: StepUpdateData) => {
@@ -473,6 +544,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
     get().recalculateWarnings();
     get().recalculatePurchaseSuggestions();
+    saveState(get());
   },
 
   completeOrder: (orderId: string) => {
@@ -494,6 +566,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }));
     get().recalculateWarnings();
     get().recalculatePurchaseSuggestions();
+    saveState(get());
   },
 
   resolveWarning: (warningId: string) => {
@@ -502,6 +575,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         w.id === warningId ? { ...w, isResolved: true } : w
       ),
     }));
+    saveState(get());
   },
 
   recalculateWarnings: () => {
@@ -555,5 +629,34 @@ export const useAppStore = create<AppStore>((set, get) => ({
       });
     });
     return tasks;
+  },
+
+  resetToDefault: () => {
+    clearStorage();
+    const defaultData = getDefaultData();
+    const purchaseSuggestions = calculatePurchaseSuggestions(
+      defaultData.orders,
+      defaultData.ingredients,
+      defaultData.recipes
+    );
+
+    set({
+      orders: defaultData.orders,
+      recipes: defaultData.recipes,
+      ingredients: defaultData.ingredients,
+      warnings: defaultData.warnings,
+      purchaseSuggestions,
+      ...defaultData.viewPreferences,
+      selectedOrderId: null,
+      showCreateOrderModal: false,
+      showRecipeModal: false,
+      showPrintPreview: false,
+      showScheduleAdjustModal: false,
+      scheduleAdjustOrderId: null,
+      printOrderId: null,
+      editingRecipeId: null,
+    });
+
+    console.log('[Store] Reset to default data completed');
   },
 }));
