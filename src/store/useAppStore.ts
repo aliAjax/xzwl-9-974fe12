@@ -6,6 +6,9 @@ import {
   StepStatus,
   ViewType,
   STEP_ORDER,
+  CreateOrderData,
+  Order,
+  ProductionStep,
 } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
@@ -17,6 +20,14 @@ type AppStore = AppState & AppActions;
 
 const initialWarnings = calculateAllWarnings(mockOrders, mockIngredients, mockRecipes);
 
+const generateOrderId = (): string => `order-${Date.now().toString().slice(-6)}`;
+const generateOrderNo = (): string => {
+  const today = getToday();
+  const yearMonth = today.slice(0, 7).replace('-', '');
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `XY-${yearMonth}-${random}`;
+};
+
 export const useAppStore = create<AppStore>((set, get) => ({
   orders: mockOrders,
   recipes: mockRecipes,
@@ -27,6 +38,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   selectedOrderId: null,
   showIngredientPanel: false,
   showWarningPanel: false,
+  showCreateOrderModal: false,
 
   setCurrentView: (view: ViewType) => set({ currentView: view }),
 
@@ -37,6 +49,83 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setShowIngredientPanel: (show: boolean) => set({ showIngredientPanel: show }),
 
   setShowWarningPanel: (show: boolean) => set({ showWarningPanel: show }),
+
+  setShowCreateOrderModal: (show: boolean) => set({ showCreateOrderModal: show }),
+
+  createOrder: (data: CreateOrderData): Order => {
+    const orderId = generateOrderId();
+    const orderNo = generateOrderNo();
+    const today = getToday();
+
+    const { getRecipeById } = get();
+    const recipe = getRecipeById(data.recipeId);
+
+    const stepDurations: Record<StepType, number> = {
+      kneading: 2,
+      shaping: 3,
+      drying: recipe?.dryingDays || 15,
+      cellaring: recipe?.cellaringDays || 30,
+      packaging: 2,
+    };
+
+    const stepNames: Record<StepType, string> = {
+      kneading: '揉料',
+      shaping: '成型',
+      drying: '阴干',
+      cellaring: '窖藏',
+      packaging: '包装',
+    };
+
+    const stepTypes: StepType[] = ['kneading', 'shaping', 'drying', 'cellaring', 'packaging'];
+    const totalDuration = stepTypes.reduce((sum, type) => sum + stepDurations[type], 0);
+    const startDate = addDaysToDate(data.deliveryDate, -totalDuration);
+
+    let currentDate = startDate;
+
+    const steps = stepTypes.map((stepType, index) => {
+      const duration = stepDurations[stepType];
+      const stepStartDate = currentDate;
+      const stepEndDate = addDaysToDate(stepStartDate, duration);
+      currentDate = stepEndDate;
+
+      return {
+        id: `${orderId}-step-${index}`,
+        orderId,
+        stepType,
+        stepName: stepNames[stepType],
+        status: 'not_started' as const,
+        startDate: stepStartDate,
+        endDate: stepEndDate,
+        durationDays: duration,
+        notes: '',
+        assignee: '',
+      };
+    });
+
+    const newOrder: Order = {
+      id: orderId,
+      orderNo,
+      customerName: data.customerName,
+      recipeId: data.recipeId,
+      quantity: data.quantity,
+      unit: data.unit,
+      orderDate: today,
+      deliveryDate: data.deliveryDate,
+      status: 'pending',
+      priority: data.priority,
+      currentStepIndex: -1,
+      steps,
+    };
+
+    set((state) => ({
+      orders: [newOrder, ...state.orders],
+      showCreateOrderModal: false,
+    }));
+
+    get().recalculateWarnings();
+
+    return newOrder;
+  },
 
   updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => {
     set((state) => ({

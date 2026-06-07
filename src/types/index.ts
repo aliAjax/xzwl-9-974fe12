@@ -85,6 +85,16 @@ export interface AppState {
   selectedOrderId: string | null;
   showIngredientPanel: boolean;
   showWarningPanel: boolean;
+  showCreateOrderModal: boolean;
+}
+
+export interface CreateOrderData {
+  customerName: string;
+  recipeId: string;
+  quantity: number;
+  unit: string;
+  deliveryDate: string;
+  priority: Priority;
 }
 
 export interface AppActions {
@@ -93,6 +103,8 @@ export interface AppActions {
   setSelectedOrderId: (id: string | null) => void;
   setShowIngredientPanel: (show: boolean) => void;
   setShowWarningPanel: (show: boolean) => void;
+  setShowCreateOrderModal: (show: boolean) => void;
+  createOrder: (data: CreateOrderData) => Order;
   updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => void;
   moveOrderToStep: (orderId: string, stepType: StepType) => void;
   completeOrder: (orderId: string) => void;

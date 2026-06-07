@@ -1,11 +1,12 @@
 import React from 'react';
-import { Package } from 'lucide-react';
+import { Package, Plus } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { Header } from '../components/layout/Header';
 import { StatsCards } from '../components/layout/StatsCards';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import OrderDetailModal from '../components/modals/OrderDetailModal';
+import CreateOrderModal from '../components/modals/CreateOrderModal';
 import { WarningPanel } from '../components/panels/WarningPanel';
 import { IngredientPanel } from '../components/panels/IngredientPanel';
 
@@ -15,8 +16,10 @@ const Home: React.FC = () => {
     selectedOrderId,
     showWarningPanel,
     showIngredientPanel,
+    showCreateOrderModal,
     setShowWarningPanel,
     setShowIngredientPanel,
+    setShowCreateOrderModal,
     ingredients,
   } = useAppStore();
 
@@ -39,6 +42,13 @@ const Home: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCreateOrderModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-incense-700 text-white rounded-lg hover:bg-incense-800 transition-colors shadow-sm"
+            >
+              <Plus size={18} />
+              <span>创建订单</span>
+            </button>
             <button
               onClick={() => setShowIngredientPanel(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-incense-200 rounded-lg hover:bg-incense-50 transition-colors shadow-sm"
@@ -64,6 +74,8 @@ const Home: React.FC = () => {
       </main>
 
       {selectedOrderId && <OrderDetailModal />}
+
+      {showCreateOrderModal && <CreateOrderModal />}
 
       {showWarningPanel && (
         <WarningPanel onClose={() => setShowWarningPanel(false)} />
