@@ -345,37 +345,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
     saveState(get());
   },
 
-  copyRecipe: (id: string): Recipe => {
-    const { getRecipeById } = get();
-    const originalRecipe = getRecipeById(id);
-
-    if (!originalRecipe) {
-      throw new Error(`Recipe with id ${id} not found`);
-    }
-
-    const newRecipeId = generateRecipeId();
-
-    const newRecipe: Recipe = {
-      id: newRecipeId,
-      name: `${originalRecipe.name} 副本`,
-      description: originalRecipe.description,
-      ingredients: originalRecipe.ingredients.map(ing => ({ ...ing })),
-      dryingDays: originalRecipe.dryingDays,
-      cellaringDays: originalRecipe.cellaringDays,
-      craftNotes: originalRecipe.craftNotes,
-    };
-
-    set((state) => ({
-      recipes: [...state.recipes, newRecipe],
-    }));
-
-    get().recalculateWarnings();
-    get().recalculatePurchaseSuggestions();
-    saveState(get());
-
-    return newRecipe;
-  },
-
   createOrder: (data: CreateOrderData): Order => {
     const orderId = generateOrderId();
     const orderNo = generateOrderNo();

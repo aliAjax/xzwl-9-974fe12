@@ -204,7 +204,6 @@ export interface AppActions {
   createRecipe: (data: RecipeFormData) => Recipe;
   updateRecipe: (id: string, data: RecipeFormData) => Recipe;
   deleteRecipe: (id: string) => void;
-  copyRecipe: (id: string) => Recipe;
   createOrder: (data: CreateOrderData) => Order;
   updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => void;
   assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => void;
