@@ -150,8 +150,9 @@ export const calculatePurchaseSuggestions = (
     const totalSafetyStock = batches.reduce((sum, batch) => sum + batch.safetyStock, 0);
 
     const demandGap = Math.max(0, demand.total - totalCurrentStock);
-    const safetyStockGap = Math.max(0, totalSafetyStock - totalCurrentStock);
-    const gap = Math.max(demandGap, safetyStockGap);
+    const stockAfterDemand = Math.max(0, totalCurrentStock - demand.total);
+    const safetyStockGap = Math.max(0, totalSafetyStock - stockAfterDemand);
+    const gap = Math.max(0, demand.total + totalSafetyStock - totalCurrentStock);
 
     const priority = calculatePriority(gap, totalSafetyStock, daysToExpiry, demand.orders);
 
