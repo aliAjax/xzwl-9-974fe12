@@ -11,6 +11,7 @@ import {
   Recipe,
   RecipeFormData,
   ProductionStep,
+  StepUpdateData,
 } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
@@ -19,6 +20,7 @@ import { mockCraftsmen } from '../data/mockCraftsmen';
 import { calculateAllWarnings } from '../utils/warningUtils';
 import { calculatePurchaseSuggestions } from '../utils/purchaseUtils';
 import { getToday, addDaysToDate } from '../utils/dateUtils';
+import { applyStepAdjustment, validateStepAdjustment } from '../utils/scheduleUtils';
 
 type AppStore = AppState & AppActions;
 
@@ -52,6 +54,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   showSchedulePanel: false,
   showPrintPreview: false,
   showPurchaseSuggestion: false,
+  showScheduleAdjustModal: false,
+  scheduleAdjustOrderId: null,
   printOrderId: null,
   editingRecipeId: null,
   purchaseSuggestions: initialPurchaseSuggestions,
@@ -81,6 +85,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setPrintOrderId: (id: string | null) => set({ printOrderId: id }),
 
   setEditingRecipeId: (id: string | null) => set({ editingRecipeId: id }),
+
+  setShowScheduleAdjustModal: (show: boolean) => set({ showScheduleAdjustModal: show }),
+
+  setScheduleAdjustOrderId: (id: string | null) => set({ scheduleAdjustOrderId: id }),
 
   createRecipe: (data: RecipeFormData): Recipe => {
     const recipeId = generateRecipeId();
@@ -302,6 +310,30 @@ export const useAppStore = create<AppStore>((set, get) => ({
           steps: updatedSteps,
           currentStepIndex: targetStepIndex,
           status: newStatus,
+        };
+      }),
+    }));
+
+    get().recalculateWarnings();
+    get().recalculatePurchaseSuggestions();
+  },
+
+  updateProductionStep: (orderId: string, stepId: string, updates: StepUpdateData) => {
+    const { orders } = get();
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    const validation = validateStepAdjustment(order, stepId, updates);
+    if (!validation.valid) return;
+
+    const updatedSteps = applyStepAdjustment(order, stepId, updates);
+
+    set((state) => ({
+      orders: state.orders.map((o) => {
+        if (o.id !== orderId) return o;
+        return {
+          ...o,
+          steps: updatedSteps,
         };
       }),
     }));

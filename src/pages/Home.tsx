@@ -9,6 +9,7 @@ import OrderDetailModal from '../components/modals/OrderDetailModal';
 import CreateOrderModal from '../components/modals/CreateOrderModal';
 import RecipeModal from '../components/modals/RecipeModal';
 import PrintPreviewModal from '../components/modals/PrintPreviewModal';
+import ScheduleAdjustModal from '../components/modals/ScheduleAdjustModal';
 import { WarningPanel } from '../components/panels/WarningPanel';
 import { IngredientPanel } from '../components/panels/IngredientPanel';
 import { RecipePanel } from '../components/panels/RecipePanel';
@@ -27,6 +28,7 @@ const Home: React.FC = () => {
     showSchedulePanel,
     showPrintPreview,
     showPurchaseSuggestion,
+    showScheduleAdjustModal,
     setShowWarningPanel,
     setShowIngredientPanel,
     setShowCreateOrderModal,
@@ -141,6 +143,8 @@ const Home: React.FC = () => {
       {showPurchaseSuggestion && (
         <PurchaseSuggestionPanel onClose={() => setShowPurchaseSuggestion(false)} />
       )}
+
+      {showScheduleAdjustModal && <ScheduleAdjustModal />}
     </div>
   );
 };

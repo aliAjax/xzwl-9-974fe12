@@ -148,6 +148,32 @@ export interface CreateOrderData {
   priority: Priority;
 }
 
+export interface StepAdjustPreview {
+  stepId: string;
+  originalStartDate: string;
+  originalEndDate: string;
+  originalDurationDays: number;
+  newStartDate: string;
+  newEndDate: string;
+  newDurationDays: number;
+  isChanged: boolean;
+  isAffected: boolean;
+  shiftDays: number;
+}
+
+export interface ScheduleAdjustPreview {
+  orderId: string;
+  steps: StepAdjustPreview[];
+  newWarnings: Warning[];
+  originalWarnings: Warning[];
+  totalDelayDays: number;
+}
+
+export interface StepUpdateData {
+  startDate?: string;
+  durationDays?: number;
+}
+
 export interface AppActions {
   setCurrentView: (view: ViewType) => void;
   setSelectedDate: (date: string) => void;
@@ -162,6 +188,8 @@ export interface AppActions {
   setShowPurchaseSuggestion: (show: boolean) => void;
   setPrintOrderId: (id: string | null) => void;
   setEditingRecipeId: (id: string | null) => void;
+  setShowScheduleAdjustModal: (show: boolean) => void;
+  setScheduleAdjustOrderId: (id: string | null) => void;
   createRecipe: (data: RecipeFormData) => Recipe;
   updateRecipe: (id: string, data: RecipeFormData) => Recipe;
   deleteRecipe: (id: string) => void;
@@ -169,6 +197,7 @@ export interface AppActions {
   updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => void;
   assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => void;
   moveOrderToStep: (orderId: string, stepType: StepType) => void;
+  updateProductionStep: (orderId: string, stepId: string, updates: StepUpdateData) => void;
   completeOrder: (orderId: string) => void;
   resolveWarning: (warningId: string) => void;
   recalculateWarnings: () => void;
@@ -178,6 +207,30 @@ export interface AppActions {
   getOrdersByStep: (stepType: StepType) => Order[];
   getOrdersByDate: (date: string) => Order[];
   getCraftsmanTasks: (craftsmanId: string) => { order: Order; step: ProductionStep }[];
+}
+
+export interface AppState {
+  orders: Order[];
+  recipes: Recipe[];
+  ingredients: IngredientBatch[];
+  craftsmen: Craftsman[];
+  warnings: Warning[];
+  currentView: ViewType;
+  selectedDate: string;
+  selectedOrderId: string | null;
+  showIngredientPanel: boolean;
+  showWarningPanel: boolean;
+  showCreateOrderModal: boolean;
+  showRecipePanel: boolean;
+  showRecipeModal: boolean;
+  showSchedulePanel: boolean;
+  showPrintPreview: boolean;
+  showPurchaseSuggestion: boolean;
+  showScheduleAdjustModal: boolean;
+  scheduleAdjustOrderId: string | null;
+  printOrderId: string | null;
+  editingRecipeId: string | null;
+  purchaseSuggestions: PurchaseSuggestionIngredient[];
 }
 
 export const STEP_CONFIG: Record<StepType, { name: string; icon: string; color: string }> = {
