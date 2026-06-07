@@ -17,11 +17,13 @@ import { mockRecipes } from '../data/mockRecipes';
 import { mockIngredients } from '../data/mockIngredients';
 import { mockCraftsmen } from '../data/mockCraftsmen';
 import { calculateAllWarnings } from '../utils/warningUtils';
+import { calculatePurchaseSuggestions } from '../utils/purchaseUtils';
 import { getToday, addDaysToDate } from '../utils/dateUtils';
 
 type AppStore = AppState & AppActions;
 
 const initialWarnings = calculateAllWarnings(mockOrders, mockIngredients, mockRecipes);
+const initialPurchaseSuggestions = calculatePurchaseSuggestions(mockOrders, mockIngredients, mockRecipes);
 
 const generateOrderId = (): string => `order-${Date.now().toString().slice(-6)}`;
 const generateOrderNo = (): string => {
@@ -49,8 +51,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   showRecipeModal: false,
   showSchedulePanel: false,
   showPrintPreview: false,
+  showPurchaseSuggestion: false,
   printOrderId: null,
   editingRecipeId: null,
+  purchaseSuggestions: initialPurchaseSuggestions,
 
   setCurrentView: (view: ViewType) => set({ currentView: view }),
 
@@ -71,6 +75,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setShowSchedulePanel: (show: boolean) => set({ showSchedulePanel: show }),
 
   setShowPrintPreview: (show: boolean) => set({ showPrintPreview: show }),
+
+  setShowPurchaseSuggestion: (show: boolean) => set({ showPurchaseSuggestion: show }),
 
   setPrintOrderId: (id: string | null) => set({ printOrderId: id }),
 
@@ -116,6 +122,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }));
 
     get().recalculateWarnings();
+    get().recalculatePurchaseSuggestions();
 
     return updatedRecipe;
   },
@@ -125,6 +132,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       recipes: state.recipes.filter((r) => r.id !== id),
     }));
     get().recalculateWarnings();
+    get().recalculatePurchaseSuggestions();
   },
 
   createOrder: (data: CreateOrderData): Order => {
@@ -198,6 +206,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }));
 
     get().recalculateWarnings();
+    get().recalculatePurchaseSuggestions();
 
     return newOrder;
   },
@@ -216,6 +225,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }),
     }));
     get().recalculateWarnings();
+    get().recalculatePurchaseSuggestions();
   },
 
   assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => {
@@ -297,6 +307,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }));
 
     get().recalculateWarnings();
+    get().recalculatePurchaseSuggestions();
   },
 
   completeOrder: (orderId: string) => {
@@ -317,6 +328,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }),
     }));
     get().recalculateWarnings();
+    get().recalculatePurchaseSuggestions();
   },
 
   resolveWarning: (warningId: string) => {
@@ -332,6 +344,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const existingResolved = get().warnings.filter((w) => w.isResolved);
     const newWarnings = calculateAllWarnings(orders, ingredients, recipes);
     set({ warnings: [...existingResolved, ...newWarnings] });
+  },
+
+  recalculatePurchaseSuggestions: () => {
+    const { orders, ingredients, recipes } = get();
+    const suggestions = calculatePurchaseSuggestions(orders, ingredients, recipes);
+    set({ purchaseSuggestions: suggestions });
   },
 
   getOrderWarnings: (orderId: string) => {

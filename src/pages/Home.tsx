@@ -13,6 +13,7 @@ import { WarningPanel } from '../components/panels/WarningPanel';
 import { IngredientPanel } from '../components/panels/IngredientPanel';
 import { RecipePanel } from '../components/panels/RecipePanel';
 import { SchedulePanel } from '../components/panels/SchedulePanel';
+import { PurchaseSuggestionPanel } from '../components/panels/PurchaseSuggestionPanel';
 
 const Home: React.FC = () => {
   const {
@@ -25,14 +26,17 @@ const Home: React.FC = () => {
     showRecipeModal,
     showSchedulePanel,
     showPrintPreview,
+    showPurchaseSuggestion,
     setShowWarningPanel,
     setShowIngredientPanel,
     setShowCreateOrderModal,
     setShowRecipePanel,
     setShowSchedulePanel,
+    setShowPurchaseSuggestion,
     ingredients,
     recipes,
     craftsmen,
+    purchaseSuggestions,
   } = useAppStore();
 
   const lowStockIngredients = ingredients.filter(
@@ -128,6 +132,10 @@ const Home: React.FC = () => {
       )}
 
       {showPrintPreview && <PrintPreviewModal />}
+
+      {showPurchaseSuggestion && (
+        <PurchaseSuggestionPanel onClose={() => setShowPurchaseSuggestion(false)} />
+      )}
     </div>
   );
 };

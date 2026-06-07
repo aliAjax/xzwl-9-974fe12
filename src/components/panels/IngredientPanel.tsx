@@ -1,16 +1,17 @@
 import React from 'react';
-import { X, Package, AlertTriangle, Calendar, TrendingDown } from 'lucide-react';
+import { X, Package, AlertTriangle, Calendar, TrendingDown, ShoppingCart } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { ProgressBar } from '../common/ProgressBar';
 import { formatDateChinese, daysBetween, getToday } from '../../utils/dateUtils';
 import { clsx } from 'clsx';
+import { Badge } from '../common/Badge';
 
 interface IngredientPanelProps {
   onClose: () => void;
 }
 
 export const IngredientPanel: React.FC<IngredientPanelProps> = ({ onClose }) => {
-  const { ingredients } = useAppStore();
+  const { ingredients, purchaseSuggestions, setShowPurchaseSuggestion } = useAppStore();
 
   const getStockStatus = (ingredient: typeof ingredients[0]) => {
     const ratio = ingredient.quantity / ingredient.safetyStock;
@@ -50,6 +51,46 @@ export const IngredientPanel: React.FC<IngredientPanelProps> = ({ onClose }) => 
             className="p-2 rounded-lg hover:bg-incense-100 transition-colors"
           >
             <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4 border-b border-incense-200 bg-white/50">
+          <button
+            onClick={() => {
+              onClose();
+              setShowPurchaseSuggestion(true);
+            }}
+            className="w-full flex items-center justify-between p-3 bg-sandal-50 hover:bg-sandal-100 border border-sandal-200 rounded-lg transition-colors group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-sandal-500 rounded-lg flex items-center justify-center">
+                <ShoppingCart className="text-white" size={20} />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-incense-800 group-hover:text-sandal-700">
+                  查看采购建议
+                </div>
+                <div className="text-xs text-incense-500">
+                  基于库存、订单和有效期智能计算
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {purchaseSuggestions.length > 0 && (
+                <Badge variant="critical">
+                  {purchaseSuggestions.length} 种待采购
+                </Badge>
+              )}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-incense-400 group-hover:text-sandal-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
           </button>
         </div>
 

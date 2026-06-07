@@ -92,6 +92,29 @@ export interface RecipeFormData {
   craftNotes: string;
 }
 
+export interface PurchaseSuggestionIngredient {
+  ingredientId: string;
+  name: string;
+  currentStock: number;
+  safetyStock: number;
+  unit: string;
+  expiryDate: string;
+  daysToExpiry: number;
+  pendingDemand: number;
+  gap: number;
+  suggestedPurchase: number;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  relatedOrders: {
+    orderId: string;
+    orderNo: string;
+    customerName: string;
+    quantity: number;
+    priority: Priority;
+    deliveryDate: string;
+    daysToDelivery: number;
+  }[];
+}
+
 export interface AppState {
   orders: Order[];
   recipes: Recipe[];
@@ -108,8 +131,10 @@ export interface AppState {
   showRecipeModal: boolean;
   showSchedulePanel: boolean;
   showPrintPreview: boolean;
+  showPurchaseSuggestion: boolean;
   printOrderId: string | null;
   editingRecipeId: string | null;
+  purchaseSuggestions: PurchaseSuggestionIngredient[];
 }
 
 export interface CreateOrderData {
@@ -132,6 +157,7 @@ export interface AppActions {
   setShowRecipeModal: (show: boolean) => void;
   setShowSchedulePanel: (show: boolean) => void;
   setShowPrintPreview: (show: boolean) => void;
+  setShowPurchaseSuggestion: (show: boolean) => void;
   setPrintOrderId: (id: string | null) => void;
   setEditingRecipeId: (id: string | null) => void;
   createRecipe: (data: RecipeFormData) => Recipe;
@@ -144,6 +170,7 @@ export interface AppActions {
   completeOrder: (orderId: string) => void;
   resolveWarning: (warningId: string) => void;
   recalculateWarnings: () => void;
+  recalculatePurchaseSuggestions: () => void;
   getOrderWarnings: (orderId: string) => Warning[];
   getRecipeById: (recipeId: string) => Recipe | undefined;
   getOrdersByStep: (stepType: StepType) => Order[];
