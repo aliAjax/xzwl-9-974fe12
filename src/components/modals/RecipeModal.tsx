@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { X, Plus, Trash2, BookOpen, Leaf, Archive, FileText } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { RecipeFormData, RecipeIngredient } from '../../types';
@@ -34,6 +34,12 @@ const RecipeModal: React.FC = () => {
   const [craftNotes, setCraftNotes] = useState('');
   const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
   const [showIngredientSuggestions, setShowIngredientSuggestions] = useState<number | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const ingredientsRef = useRef<RecipeIngredient[]>([]);
+
+  useEffect(() => {
+    ingredientsRef.current = recipeIngredients;
+  }, [recipeIngredients]);
 
   useEffect(() => {
     if (editingRecipe) {
@@ -53,46 +59,68 @@ const RecipeModal: React.FC = () => {
     }
   }, [editingRecipe, showRecipeModal]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        setShowIngredientSuggestions(null);
+      }
+    };
+
+    if (showRecipeModal) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showRecipeModal]);
+
   const totalProductionDays = useMemo(() => {
     return 2 + 3 + dryingDays + cellaringDays + 2;
   }, [dryingDays, cellaringDays]);
 
-  const handleAddIngredient = () => {
+  const generateIngredientId = useCallback(() => {
+    return `ing-${Date.now().toString().slice(-6)}-${Math.random().toString(36).slice(2, 8)}`;
+  }, []);
+
+  const handleAddIngredient = useCallback(() => {
     const newIngredient: RecipeIngredient = {
-      ingredientId: `temp-${Date.now()}`,
+      ingredientId: generateIngredientId(),
       name: '',
       quantity: 10,
       unit: 'g',
     };
-    setRecipeIngredients([...recipeIngredients, newIngredient]);
-  };
+    setRecipeIngredients((prev) => [...prev, newIngredient]);
+  }, [generateIngredientId]);
 
-  const handleRemoveIngredient = (index: number) => {
-    setRecipeIngredients(recipeIngredients.filter((_, i) => i !== index));
-  };
+  const handleRemoveIngredient = useCallback((index: number) => {
+    setRecipeIngredients((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
-  const handleIngredientChange = (index: number, field: keyof RecipeIngredient, value: string | number) => {
-    const updated = [...recipeIngredients];
-    if (field === 'name') {
-      const stockIng = stockIngredients.find((ing) => ing.name === value);
-      updated[index] = {
-        ...updated[index],
-        name: value as string,
-        ingredientId: stockIng?.id || `ing-${Date.now().toString().slice(-6)}`,
-        unit: stockIng?.unit || updated[index].unit,
-      };
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
-    }
-    setRecipeIngredients(updated);
-  };
+  const handleIngredientChange = useCallback((index: number, field: keyof RecipeIngredient, value: string | number) => {
+    setRecipeIngredients((prev) => {
+      const updated = [...prev];
+      if (field === 'name') {
+        const stockIng = stockIngredients.find((ing) => ing.name === value);
+        updated[index] = {
+          ...updated[index],
+          name: value as string,
+          ingredientId: stockIng?.id || updated[index].ingredientId,
+          unit: stockIng?.unit || updated[index].unit,
+        };
+      } else {
+        updated[index] = { ...updated[index], [field]: value };
+      }
+      return updated;
+    });
+  }, [stockIngredients]);
 
-  const getFilteredIngredientSuggestions = (currentName: string) => {
+  const getFilteredIngredientSuggestions = useCallback((currentName: string) => {
     if (!currentName) return ingredientSuggestions;
     return ingredientSuggestions.filter((name) =>
       name.toLowerCase().includes(currentName.toLowerCase())
     );
-  };
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,11 +129,14 @@ const RecipeModal: React.FC = () => {
       alert('请输入香方名称');
       return;
     }
-    if (recipeIngredients.length === 0) {
+
+    const currentIngredients = ingredientsRef.current;
+
+    if (currentIngredients.length === 0) {
       alert('请至少添加一种原料');
       return;
     }
-    if (recipeIngredients.some((ing) => !ing.name.trim() || ing.quantity <= 0)) {
+    if (currentIngredients.some((ing) => !ing.name.trim() || ing.quantity <= 0)) {
       alert('请完善所有原料信息');
       return;
     }
@@ -113,11 +144,9 @@ const RecipeModal: React.FC = () => {
     const recipeData: RecipeFormData = {
       name: name.trim(),
       description: description.trim(),
-      ingredients: recipeIngredients.map((ing, index) => ({
+      ingredients: currentIngredients.map((ing) => ({
         ...ing,
-        ingredientId: ing.ingredientId.startsWith('temp-')
-          ? `ing-${Date.now().toString().slice(-6)}-${index}`
-          : ing.ingredientId,
+        ingredientId: ing.ingredientId,
       })),
       dryingDays,
       cellaringDays,
@@ -144,7 +173,7 @@ const RecipeModal: React.FC = () => {
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={handleClose}
       />
-      <div className="relative w-full max-w-3xl max-h-[90vh] bg-incense-50 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up">
+      <div ref={modalRef} className="relative w-full max-w-3xl max-h-[90vh] bg-incense-50 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up">
         <div className="flex items-center justify-between p-6 border-b border-incense-200 bg-white">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-incense-700 rounded-xl flex items-center justify-center">
