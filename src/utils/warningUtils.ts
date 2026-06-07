@@ -168,8 +168,27 @@ export const getWarningsByType = (warnings: Warning[], type: Warning['type']): W
   return warnings.filter((w) => w.type === type && !w.isResolved);
 };
 
+const getWarningSubtype = (warning: Warning): string => {
+  if (warning.type === 'delivery') {
+    if (warning.message.includes('预计还需')) return 'schedule-delay';
+    if (warning.message.includes('距交付期仅剩')) return 'deadline-near';
+  }
+
+  if (warning.type === 'ingredient') return 'stock-low';
+  if (warning.type === 'inventory') return 'expiry-near';
+  if (warning.type === 'drying') return 'drying-cycle';
+
+  return warning.message;
+};
+
 export const getWarningKey = (warning: Warning): string => {
-  return `${warning.type}-${warning.relatedId}-${warning.level}`;
+  return [
+    warning.type,
+    warning.relatedType,
+    warning.relatedId,
+    warning.level,
+    getWarningSubtype(warning),
+  ].join('-');
 };
 
 export const mergeWarningsWithResolvedState = (

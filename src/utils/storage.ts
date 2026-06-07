@@ -38,47 +38,14 @@ export interface DefaultDataResult {
 
 type MigrationFn = (data: unknown) => PersistentAppData;
 
-const migrations: Record<number, MigrationFn> = {
-  0: (data: unknown) => {
-    console.log('[Storage] Running migration v0 -> v1');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const d = data as Record<string, any>;
-    return {
-      ...d,
-      version: 1,
-      viewPreferences: d.viewPreferences || {
-        currentView: 'kanban',
-        selectedDate: new Date().toISOString().split('T')[0],
-        showIngredientPanel: false,
-        showWarningPanel: false,
-        showRecipePanel: false,
-        showSchedulePanel: false,
-        showPurchaseSuggestion: false,
-      },
-      orders: d.orders || [],
-      recipes: d.recipes || [],
-      ingredients: d.ingredients || [],
-      warnings: d.warnings || [],
-    } as PersistentAppData;
-  },
-  1: (data: unknown) => {
-    console.log('[Storage] Running migration v1 -> v2');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const d = data as Record<string, any>;
-    return {
-      ...d,
-      version: 2,
-      viewPreferences: {
-        ...d.viewPreferences,
-        deliveryBoard: d.viewPreferences?.deliveryBoard || {
-          showCompletedOrders: false,
-          sortBy: 'deliveryDate',
-          filterRiskLevel: 'all',
-          expandedCustomers: [],
-        },
-      },
-    } as PersistentAppData;
-  },
+type StoredViewPreferences = Partial<
+  Omit<PersistentViewPreferences, 'deliveryBoard'>
+> & {
+  deliveryBoard?: Partial<CustomerDeliveryBoardState>;
+};
+
+type StoredAppData = Partial<Omit<PersistentAppData, 'viewPreferences'>> & {
+  viewPreferences?: StoredViewPreferences;
 };
 
 const defaultViewPreferences: PersistentViewPreferences = {
@@ -94,6 +61,48 @@ const defaultViewPreferences: PersistentViewPreferences = {
     sortBy: 'deliveryDate',
     filterRiskLevel: 'all',
     expandedCustomers: [],
+  },
+};
+
+const normalizeViewPreferences = (
+  viewPreferences?: StoredViewPreferences
+): PersistentViewPreferences => ({
+  ...defaultViewPreferences,
+  ...viewPreferences,
+  deliveryBoard: {
+    ...defaultViewPreferences.deliveryBoard,
+    ...viewPreferences?.deliveryBoard,
+  },
+});
+
+const migrations: Record<number, MigrationFn> = {
+  0: (data: unknown) => {
+    console.log('[Storage] Running migration v0 -> v1');
+    const d = data as StoredAppData;
+    return {
+      ...d,
+      version: 1,
+      viewPreferences: normalizeViewPreferences(d.viewPreferences),
+      orders: d.orders || [],
+      recipes: d.recipes || [],
+      ingredients: d.ingredients || [],
+      warnings: d.warnings || [],
+      savedAt: d.savedAt || new Date().toISOString(),
+    } as PersistentAppData;
+  },
+  1: (data: unknown) => {
+    console.log('[Storage] Running migration v1 -> v2');
+    const d = data as StoredAppData;
+    return {
+      ...d,
+      version: 2,
+      viewPreferences: normalizeViewPreferences(d.viewPreferences),
+      orders: d.orders || [],
+      recipes: d.recipes || [],
+      ingredients: d.ingredients || [],
+      warnings: d.warnings || [],
+      savedAt: d.savedAt || new Date().toISOString(),
+    } as PersistentAppData;
   },
 };
 
@@ -155,7 +164,7 @@ export const loadFromStorage = (): DefaultDataResult | null => {
       recipes: data.recipes,
       ingredients: data.ingredients,
       warnings: mergedWarnings,
-      viewPreferences: data.viewPreferences,
+      viewPreferences: normalizeViewPreferences(data.viewPreferences),
     };
   } catch (error) {
     console.error('[Storage] Failed to load data:', error);
