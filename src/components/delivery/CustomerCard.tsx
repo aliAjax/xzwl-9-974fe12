@@ -20,6 +20,7 @@ interface CustomerCardProps {
   summary: CustomerOrderSummary;
   isExpanded: boolean;
   onToggle: () => void;
+  searchTerm?: string;
 }
 
 const riskLevelConfig = {
@@ -41,19 +42,49 @@ const statusLabel = {
   completed: '已完成',
 };
 
+const highlightMatch = (text: string, searchTerm: string): React.ReactNode => {
+  if (!searchTerm.trim()) return text;
+
+  const term = searchTerm.trim().toLowerCase();
+  const index = text.toLowerCase().indexOf(term);
+
+  if (index === -1) return text;
+
+  return (
+    <>
+      {text.slice(0, index)}
+      <mark className="bg-amber-200 text-amber-900 px-0.5 rounded font-medium">
+        {text.slice(index, index + term.length)}
+      </mark>
+      {text.slice(index + term.length)}
+    </>
+  );
+};
+
 export const CustomerCard: React.FC<CustomerCardProps> = ({
   summary,
   isExpanded,
   onToggle,
+  searchTerm = '',
 }) => {
   const { setSelectedOrderId, getRecipeById, deliveryBoard } = useAppStore();
   const riskConfig = riskLevelConfig[summary.riskLevel];
 
   const { showCompletedOrders } = deliveryBoard;
 
-  const displayOrders = showCompletedOrders
+  let displayOrders = showCompletedOrders
     ? summary.orders
     : summary.orders.filter((o) => o.status !== 'completed');
+
+  if (searchTerm.trim()) {
+    const term = searchTerm.trim().toLowerCase();
+    const customerMatch = summary.customerName.toLowerCase().includes(term);
+    if (!customerMatch) {
+      displayOrders = displayOrders.filter((o) =>
+        o.orderNo.toLowerCase().includes(term)
+      );
+    }
+  }
 
   const sortedOrders = [...displayOrders].sort((a, b) => {
     if (a.priority === 'high' && b.priority !== 'high') return -1;
@@ -108,7 +139,7 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
             </div>
             <div>
               <h3 className="text-lg font-bold font-song text-incense-800">
-                {summary.customerName}
+                {highlightMatch(summary.customerName, searchTerm)}
               </h3>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-incense-500">
@@ -226,7 +257,11 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
             )}
           </div>
           <div className="text-incense-500">
-            点击展开查看 {sortedOrders.length} 个订单详情
+            {searchTerm.trim() && sortedOrders.length > 0
+              ? `搜索匹配 ${sortedOrders.length} 个订单，点击展开查看详情`
+              : sortedOrders.length > 0
+                ? `点击展开查看 ${sortedOrders.length} 个订单详情`
+                : '暂无匹配的订单'}
           </div>
         </div>
       </div>
@@ -236,7 +271,11 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
           {sortedOrders.length === 0 ? (
             <div className="p-8 text-center text-incense-500">
               <Package size={40} className="mx-auto mb-2 opacity-50" />
-              <p>暂无订单数据</p>
+              <p>
+                {searchTerm.trim()
+                  ? '未找到匹配的订单'
+                  : '暂无订单数据'}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-incense-100">
@@ -264,7 +303,9 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <span className="font-semibold text-incense-800">{order.orderNo}</span>
+                          <span className="font-semibold text-incense-800">
+                            {highlightMatch(order.orderNo, searchTerm)}
+                          </span>
                           <Badge variant={order.priority}>{priorityLabel[order.priority]}</Badge>
                           <Badge
                             variant={

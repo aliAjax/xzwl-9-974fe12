@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Users,
   Filter,
@@ -9,6 +9,8 @@ import {
   TrendingUp,
   Package,
   Clock,
+  Search,
+  X,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAppStore } from '../../store/useAppStore';
@@ -44,6 +46,8 @@ const priorityOrder = {
 };
 
 export const CustomerDeliveryBoard: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+
   const {
     getCustomerOrderSummaries,
     deliveryBoard,
@@ -60,6 +64,17 @@ export const CustomerDeliveryBoard: React.FC = () => {
 
     if (filterRiskLevel !== 'all') {
       result = result.filter((s) => s.riskLevel === filterRiskLevel);
+    }
+
+    if (searchTerm.trim()) {
+      const term = searchTerm.trim().toLowerCase();
+      result = result.filter((s) => {
+        const customerMatch = s.customerName.toLowerCase().includes(term);
+        const orderMatch = s.orders.some((o) =>
+          o.orderNo.toLowerCase().includes(term)
+        );
+        return customerMatch || orderMatch;
+      });
     }
 
     result = [...result].sort((a, b) => {
@@ -89,7 +104,7 @@ export const CustomerDeliveryBoard: React.FC = () => {
     });
 
     return result;
-  }, [getCustomerOrderSummaries, sortBy, filterRiskLevel]);
+  }, [getCustomerOrderSummaries, sortBy, filterRiskLevel, searchTerm]);
 
   const stats = useMemo(() => {
     const total = summaries.length;
@@ -182,6 +197,34 @@ export const CustomerDeliveryBoard: React.FC = () => {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-incense-100 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <div className="relative flex-1 max-w-md">
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-incense-400"
+            />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="搜索客户名称或订单号..."
+              className={clsx(
+                'w-full pl-10 pr-10 py-2 text-sm rounded-lg border transition-colors outline-none',
+                searchTerm
+                  ? 'border-incense-400 bg-incense-50'
+                  : 'border-incense-200 bg-white focus:border-incense-400 focus:bg-incense-50'
+              )}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-incense-400 hover:text-incense-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
@@ -251,9 +294,11 @@ export const CustomerDeliveryBoard: React.FC = () => {
             <Users size={48} className="mx-auto text-incense-300 mb-4" />
             <h3 className="text-lg font-medium text-incense-600 mb-2">暂无客户数据</h3>
             <p className="text-sm text-incense-400">
-              {filterRiskLevel !== 'all'
-                ? '当前筛选条件下没有客户数据，请调整筛选条件'
-                : '还没有订单数据，创建第一个订单开始吧'}
+              {searchTerm.trim()
+                ? '未找到匹配的客户或订单，请尝试其他搜索关键词'
+                : filterRiskLevel !== 'all'
+                  ? '当前筛选条件下没有客户数据，请调整筛选条件'
+                  : '还没有订单数据，创建第一个订单开始吧'}
             </p>
           </div>
         ) : (
@@ -263,6 +308,7 @@ export const CustomerDeliveryBoard: React.FC = () => {
               summary={summary}
               isExpanded={expandedCustomers.includes(summary.customerName)}
               onToggle={() => toggleCustomerExpand(summary.customerName)}
+              searchTerm={searchTerm}
             />
           ))
         )}
