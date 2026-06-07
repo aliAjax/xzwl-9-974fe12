@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ShoppingCart, AlertTriangle, TrendingDown, Package, Calendar, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { X, ShoppingCart, AlertTriangle, TrendingDown, Package, Calendar, ChevronDown, ChevronUp, RefreshCw, Download, Copy, Check } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { formatDateChinese } from '../../utils/dateUtils';
 import { clsx } from 'clsx';
@@ -30,11 +30,58 @@ export const PurchaseSuggestionPanel: React.FC<PurchaseSuggestionPanelProps> = (
   const { purchaseSuggestions, recalculatePurchaseSuggestions } = useAppStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
     recalculatePurchaseSuggestions();
     setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const generateExportText = (): string => {
+    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    const priorityLabels = { critical: '紧急', high: '高', medium: '中', low: '低' };
+    const sorted = [...purchaseSuggestions].sort((a, b) => {
+      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      }
+      return b.gap - a.gap;
+    });
+
+    const header = [
+      '原料名',
+      '优先级',
+      '建议采购量',
+      '单位',
+      '缺口',
+      '安全库存',
+      '最早有效期',
+      '关联订单数量'
+    ].join('\t');
+
+    const rows = sorted.map((s) => [
+      s.name,
+      priorityLabels[s.priority],
+      s.suggestedPurchase,
+      s.unit,
+      s.gap,
+      s.safetyStock,
+      formatDateChinese(s.expiryDate),
+      s.relatedOrders.length
+    ].join('\t'));
+
+    return [header, ...rows].join('\n');
+  };
+
+  const handleCopyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(generateExportText());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
   };
 
   const getExpiryStatus = (daysToExpiry: number) => {
@@ -201,6 +248,13 @@ export const PurchaseSuggestionPanel: React.FC<PurchaseSuggestionPanelProps> = (
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowExportModal(true)}
+              className="p-2 rounded-lg hover:bg-incense-100 transition-colors"
+              title="导出采购清单"
+            >
+              <Download size={20} />
+            </button>
+            <button
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="p-2 rounded-lg hover:bg-incense-100 transition-colors disabled:opacity-50"
@@ -252,6 +306,59 @@ export const PurchaseSuggestionPanel: React.FC<PurchaseSuggestionPanelProps> = (
           )}
         </div>
       </div>
+
+      {showExportModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col m-4">
+            <div className="flex items-center justify-between p-6 border-b border-incense-200">
+              <div>
+                <h3 className="text-xl font-bold font-song text-incense-800">导出采购清单</h3>
+                <p className="text-sm text-incense-500 mt-1">按优先级排序，可复制后发送给采购同事</p>
+              </div>
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="p-2 rounded-lg hover:bg-incense-100 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-6">
+              <div className="bg-incense-50 rounded-lg p-4 font-mono text-sm">
+                <pre className="whitespace-pre-wrap text-incense-700">{generateExportText()}</pre>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-incense-200">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2 rounded-lg border border-incense-200 text-incense-600 hover:bg-incense-50 transition-colors"
+              >
+                关闭
+              </button>
+              <button
+                onClick={handleCopyToClipboard}
+                className={clsx(
+                  'px-4 py-2 rounded-lg flex items-center gap-2 transition-colors',
+                  copied
+                    ? 'bg-green-500 text-white'
+                    : 'bg-sandal-600 text-white hover:bg-sandal-700'
+                )}
+              >
+                {copied ? (
+                  <>
+                    <Check size={18} />
+                    已复制
+                  </>
+                ) : (
+                  <>
+                    <Copy size={18} />
+                    复制到剪贴板
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
