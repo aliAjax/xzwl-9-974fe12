@@ -17,16 +17,18 @@ const RecipeModal: React.FC = () => {
     editingRecipeId,
     setShowRecipeModal,
     setEditingRecipeId,
+    copyingRecipeId,
+    setCopyingRecipeId,
     getRecipeById,
     createRecipe,
     updateRecipe,
     ingredients: stockIngredients,
   } = useAppStore();
 
+  const sourceRecipeId = editingRecipeId || copyingRecipeId;
   const editingRecipe = useMemo(() => {
-    return editingRecipeId ? getRecipeById(editingRecipeId) : undefined;
-  }, [editingRecipeId, getRecipeById]);
-
+    return sourceRecipeId ? getRecipeById(sourceRecipeId) : undefined;
+  }, [sourceRecipeId, getRecipeById]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [dryingDays, setDryingDays] = useState<number>(15);
@@ -43,22 +45,25 @@ const RecipeModal: React.FC = () => {
 
   useEffect(() => {
     if (editingRecipe) {
-      setName(editingRecipe.name);
+      if (copyingRecipeId) {
+        setName(`${editingRecipe.name} 副本`);
+      } else {
+        setName(editingRecipe.name);
+      }
       setDescription(editingRecipe.description);
       setDryingDays(editingRecipe.dryingDays);
       setCellaringDays(editingRecipe.cellaringDays);
       setCraftNotes(editingRecipe.craftNotes);
       setRecipeIngredients([...editingRecipe.ingredients]);
     } else {
-      setName('');
-      setDescription('');
+      setName("");
+      setDescription("");
       setDryingDays(15);
       setCellaringDays(30);
-      setCraftNotes('');
+      setCraftNotes("");
       setRecipeIngredients([]);
     }
-  }, [editingRecipe, showRecipeModal]);
-
+  }, [editingRecipe, showRecipeModal, copyingRecipeId]);
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
@@ -153,18 +158,18 @@ const RecipeModal: React.FC = () => {
       craftNotes: craftNotes.trim(),
     };
 
-    if (editingRecipeId) {
+    if (editingRecipeId && !copyingRecipeId) {
       updateRecipe(editingRecipeId, recipeData);
     } else {
       createRecipe(recipeData);
-    }
-  };
+      setCopyingRecipeId(null);
+    }  };
 
   const handleClose = () => {
     setShowRecipeModal(false);
     setEditingRecipeId(null);
+    setCopyingRecipeId(null);
   };
-
   if (!showRecipeModal) return null;
 
   return (
@@ -181,10 +186,10 @@ const RecipeModal: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold font-song text-incense-800">
-                {editingRecipe ? '编辑香方' : '新建香方'}
+                {editingRecipeId ? '编辑香方' : copyingRecipeId ? '复制香方' : '新建香方'}
               </h2>
               <p className="text-sm text-incense-500">
-                {editingRecipe ? '修改香方配方和工艺参数' : '创建新的香方配方'}
+                {editingRecipeId ? '修改香方配方和工艺参数' : copyingRecipeId ? '基于已有香方创建副本' : '创建新的香方配方'}
               </p>
             </div>
           </div>
@@ -386,7 +391,7 @@ const RecipeModal: React.FC = () => {
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={16} className="inline mr-1" />
-            {editingRecipe ? '保存修改' : '创建香方'}
+            {editingRecipeId ? '保存修改' : copyingRecipeId ? '创建副本' : '创建香方'}
           </button>
         </div>
       </div>

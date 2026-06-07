@@ -138,7 +138,7 @@ export interface AppState {
   scheduleAdjustOrderId: string | null;
   printOrderId: string | null;
   editingRecipeId: string | null;
-  purchaseSuggestions: PurchaseSuggestionIngredient[];
+  copyingRecipeId: string | null;  purchaseSuggestions: PurchaseSuggestionIngredient[];
   deliveryBoard: CustomerDeliveryBoardState;
 }
 
@@ -191,7 +191,7 @@ export interface AppActions {
   setShowPurchaseSuggestion: (show: boolean) => void;
   setPrintOrderId: (id: string | null) => void;
   setEditingRecipeId: (id: string | null) => void;
-  setShowScheduleAdjustModal: (show: boolean) => void;
+  setCopyingRecipeId: (id: string | null) => void;  setShowScheduleAdjustModal: (show: boolean) => void;
   setScheduleAdjustOrderId: (id: string | null) => void;
   setShowCompletedOrders: (show: boolean) => void;
   setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) => void;
@@ -202,7 +202,7 @@ export interface AppActions {
   createRecipe: (data: RecipeFormData) => Recipe;
   updateRecipe: (id: string, data: RecipeFormData) => Recipe;
   deleteRecipe: (id: string) => void;
-  createOrder: (data: CreateOrderData) => Order;
+  copyRecipe: (id: string) => Recipe;  createOrder: (data: CreateOrderData) => Order;
   updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => void;
   assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => void;
   moveOrderToStep: (orderId: string, stepType: StepType) => void;
@@ -240,7 +240,7 @@ export interface AppState {
   scheduleAdjustOrderId: string | null;
   printOrderId: string | null;
   editingRecipeId: string | null;
-  purchaseSuggestions: PurchaseSuggestionIngredient[];
+  copyingRecipeId: string | null;  purchaseSuggestions: PurchaseSuggestionIngredient[];
 }
 
 export const STEP_CONFIG: Record<StepType, { name: string; icon: string; color: string }> = {

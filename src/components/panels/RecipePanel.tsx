@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, BookOpen, Plus, Edit2, Trash2, Clock, Leaf, Archive } from 'lucide-react';
+import { X, BookOpen, Plus, Edit2, Trash2, Clock, Leaf, Archive, Copy } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { Recipe } from '../../types';
 
@@ -14,6 +14,8 @@ export const RecipePanel: React.FC<RecipePanelProps> = ({ onClose }) => {
     setShowRecipeModal,
     setEditingRecipeId,
     deleteRecipe,
+    copyRecipe,
+    setCopyingRecipeId,
   } = useAppStore();
 
   const getRecipeUsageCount = (recipeId: string): number => {
@@ -22,6 +24,13 @@ export const RecipePanel: React.FC<RecipePanelProps> = ({ onClose }) => {
 
   const handleEdit = (recipe: Recipe) => {
     setEditingRecipeId(recipe.id);
+    setShowRecipeModal(true);
+  };
+
+  const handleCopy = (recipe: Recipe) => {
+    const newRecipe = copyRecipe(recipe.id);
+    setEditingRecipeId(newRecipe.id);
+    setCopyingRecipeId(null);
     setShowRecipeModal(true);
   };
 
@@ -115,6 +124,16 @@ export const RecipePanel: React.FC<RecipePanelProps> = ({ onClose }) => {
                         title="编辑香方"
                       >
                         <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopy(recipe);
+                        }}
+                        className="p-1.5 rounded-md hover:bg-incense-100 text-incense-500 hover:text-incense-700 transition-colors"
+                        title="复制香方"
+                      >
+                        <Copy size={16} />
                       </button>
                       <button
                         onClick={(e) => handleDelete(recipe.id, e)}

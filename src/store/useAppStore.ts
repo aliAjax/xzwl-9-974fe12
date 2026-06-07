@@ -62,6 +62,7 @@ const getInitialState = (): AppState => {
     scheduleAdjustOrderId: null,
     printOrderId: null,
     editingRecipeId: null,
+    copyingRecipeId: null,
     purchaseSuggestions,
     deliveryBoard: data.viewPreferences.deliveryBoard,
   };
@@ -147,6 +148,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setPrintOrderId: (id: string | null) => set({ printOrderId: id }),
 
   setEditingRecipeId: (id: string | null) => set({ editingRecipeId: id }),
+
+  setCopyingRecipeId: (id: string | null) => set({ copyingRecipeId: id }),
 
   setShowScheduleAdjustModal: (show: boolean) => set({ showScheduleAdjustModal: show }),
 
@@ -301,6 +304,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       recipes: [...state.recipes, newRecipe],
       showRecipeModal: false,
       editingRecipeId: null,
+    copyingRecipeId: null,
     }));
 
     saveState(get());
@@ -322,6 +326,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       recipes: state.recipes.map((r) => (r.id === id ? updatedRecipe : r)),
       showRecipeModal: false,
       editingRecipeId: null,
+    copyingRecipeId: null,
     }));
 
     get().recalculateWarnings();
@@ -338,6 +343,37 @@ export const useAppStore = create<AppStore>((set, get) => ({
     get().recalculateWarnings();
     get().recalculatePurchaseSuggestions();
     saveState(get());
+  },
+
+  copyRecipe: (id: string): Recipe => {
+    const { getRecipeById } = get();
+    const originalRecipe = getRecipeById(id);
+
+    if (!originalRecipe) {
+      throw new Error(`Recipe with id ${id} not found`);
+    }
+
+    const newRecipeId = generateRecipeId();
+
+    const newRecipe: Recipe = {
+      id: newRecipeId,
+      name: `${originalRecipe.name} 副本`,
+      description: originalRecipe.description,
+      ingredients: originalRecipe.ingredients.map(ing => ({ ...ing })),
+      dryingDays: originalRecipe.dryingDays,
+      cellaringDays: originalRecipe.cellaringDays,
+      craftNotes: originalRecipe.craftNotes,
+    };
+
+    set((state) => ({
+      recipes: [...state.recipes, newRecipe],
+    }));
+
+    get().recalculateWarnings();
+    get().recalculatePurchaseSuggestions();
+    saveState(get());
+
+    return newRecipe;
   },
 
   createOrder: (data: CreateOrderData): Order => {
@@ -653,6 +689,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       scheduleAdjustOrderId: null,
       printOrderId: null,
       editingRecipeId: null,
+    copyingRecipeId: null,
     });
 
     console.log('[Store] Reset to default data completed');
