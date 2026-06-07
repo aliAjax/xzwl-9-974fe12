@@ -8,7 +8,6 @@ import {
   STEP_ORDER,
   CreateOrderData,
   Order,
-  ProductionStep,
 } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
