@@ -304,7 +304,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       recipes: [...state.recipes, newRecipe],
       showRecipeModal: false,
       editingRecipeId: null,
-    copyingRecipeId: null,
+      copyingRecipeId: null,
     }));
 
     saveState(get());
@@ -326,7 +326,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       recipes: state.recipes.map((r) => (r.id === id ? updatedRecipe : r)),
       showRecipeModal: false,
       editingRecipeId: null,
-    copyingRecipeId: null,
+      copyingRecipeId: null,
     }));
 
     get().recalculateWarnings();
@@ -689,7 +689,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       scheduleAdjustOrderId: null,
       printOrderId: null,
       editingRecipeId: null,
-    copyingRecipeId: null,
+      copyingRecipeId: null,
     });
 
     console.log('[Store] Reset to default data completed');

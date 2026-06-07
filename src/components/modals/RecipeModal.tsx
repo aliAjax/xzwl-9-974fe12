@@ -163,7 +163,8 @@ const RecipeModal: React.FC = () => {
     } else {
       createRecipe(recipeData);
       setCopyingRecipeId(null);
-    }  };
+    }
+  };
 
   const handleClose = () => {
     setShowRecipeModal(false);

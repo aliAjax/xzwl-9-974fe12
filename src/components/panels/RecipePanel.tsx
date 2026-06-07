@@ -14,7 +14,6 @@ export const RecipePanel: React.FC<RecipePanelProps> = ({ onClose }) => {
     setShowRecipeModal,
     setEditingRecipeId,
     deleteRecipe,
-    copyRecipe,
     setCopyingRecipeId,
   } = useAppStore();
 
@@ -28,9 +27,8 @@ export const RecipePanel: React.FC<RecipePanelProps> = ({ onClose }) => {
   };
 
   const handleCopy = (recipe: Recipe) => {
-    const newRecipe = copyRecipe(recipe.id);
-    setEditingRecipeId(newRecipe.id);
-    setCopyingRecipeId(null);
+    setCopyingRecipeId(recipe.id);
+    setEditingRecipeId(null);
     setShowRecipeModal(true);
   };
 
