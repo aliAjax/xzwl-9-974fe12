@@ -211,7 +211,13 @@ export const SchedulePanel: React.FC<SchedulePanelProps> = ({ onClose }) => {
             {assigningStep && (
               <div className="mb-4 p-3 bg-sandal-50 border border-sandal-300 rounded-lg">
                 <p className="text-sm text-incense-700 mb-2">
-                  请选择要指派的工匠：
+                  {(() => {
+                    const order = orders.find((o) => o.id === assigningStep.orderId);
+                    const step = order?.steps.find((s) => s.id === assigningStep.stepId);
+                    return step?.assignee
+                      ? `将「${order?.orderNo}」的${step?.stepName}工序从「${step.assignee}」改派给：`
+                      : `请选择要指派「${order?.orderNo}」${step?.stepName}工序的工匠：`;
+                  })()}
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {craftsmen
@@ -308,15 +314,29 @@ export const SchedulePanel: React.FC<SchedulePanelProps> = ({ onClose }) => {
                                   {order.orderNo}
                                 </span>
                               </div>
-                              <span
-                                className="text-xs px-1.5 py-0.5 rounded"
-                                style={{
-                                  backgroundColor: `${config.color}15`,
-                                  color: config.color,
-                                }}
-                              >
-                                {step.durationDays}天
-                              </span>
+                              <div className="flex items-center gap-1">
+                                {step.status === 'in_progress' && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setAssigningStep({ orderId: order.id, stepId: step.id });
+                                    }}
+                                    className="text-xs px-1.5 py-0.5 bg-sandal-100 text-sandal-700 rounded hover:bg-sandal-200 transition-colors flex items-center gap-0.5"
+                                  >
+                                    <span>改派</span>
+                                    <span>↻</span>
+                                  </button>
+                                )}
+                                <span
+                                  className="text-xs px-1.5 py-0.5 rounded"
+                                  style={{
+                                    backgroundColor: `${config.color}15`,
+                                    color: config.color,
+                                  }}
+                                >
+                                  {step.durationDays}天
+                                </span>
+                              </div>
                             </div>
                             <p className="text-xs text-incense-500">{order.customerName}</p>
                             <div className="flex items-center gap-1 mt-1 text-xs text-incense-400">
@@ -382,10 +402,17 @@ export const SchedulePanel: React.FC<SchedulePanelProps> = ({ onClose }) => {
                                   </span>
                                 </div>
                                 {step.assignee ? (
-                                  <div className="flex items-center gap-1 text-xs text-incense-600 bg-white px-2 py-0.5 rounded border border-incense-200">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setAssigningStep({ orderId: order.id, stepId: step.id });
+                                    }}
+                                    className="flex items-center gap-1 text-xs text-incense-600 bg-white px-2 py-0.5 rounded border border-incense-200 hover:border-sandal-400 hover:bg-sandal-50 transition-colors"
+                                  >
                                     <User size={10} />
                                     <span>{step.assignee}</span>
-                                  </div>
+                                    <span className="text-incense-400 ml-1">↻</span>
+                                  </button>
                                 ) : (
                                   <button
                                     onClick={(e) => {
