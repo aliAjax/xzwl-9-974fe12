@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { formatDateChinese } from '../../utils/dateUtils';
 import { clsx } from 'clsx';
 import { Badge } from '../common/Badge';
+import type { BadgeProps } from '../common/Badge';
 import { ProgressBar } from '../common/ProgressBar';
 import { PurchaseSuggestionIngredient } from '../../types';
 
@@ -11,7 +12,14 @@ interface PurchaseSuggestionPanelProps {
   onClose: () => void;
 }
 
-const priorityConfig = {
+type PriorityLevel = PurchaseSuggestionIngredient['priority'];
+
+const priorityConfig: Record<PriorityLevel, {
+  label: string;
+  color: BadgeProps['variant'];
+  bgColor: string;
+  borderColor: string;
+}> = {
   critical: { label: '紧急', color: 'critical', bgColor: 'bg-red-50', borderColor: 'border-l-red-500' },
   high: { label: '高', color: 'high', bgColor: 'bg-amber-50', borderColor: 'border-l-amber-500' },
   medium: { label: '中', color: 'medium', bgColor: 'bg-amber-50', borderColor: 'border-l-amber-400' },
@@ -60,7 +68,7 @@ export const PurchaseSuggestionPanel: React.FC<PurchaseSuggestionPanelProps> = (
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-incense-800">{suggestion.name}</h3>
-                <Badge variant={config.color as any}>{config.label}</Badge>
+                <Badge variant={config.color}>{config.label}</Badge>
               </div>
               <div className="flex items-center gap-4 text-sm text-incense-500">
                 <span className="flex items-center gap-1">
@@ -124,8 +132,16 @@ export const PurchaseSuggestionPanel: React.FC<PurchaseSuggestionPanelProps> = (
                 <div className="font-medium text-incense-800">{suggestion.pendingDemand} {suggestion.unit}</div>
               </div>
               <div className="space-y-1">
-                <div className="text-xs text-incense-500">预计缺口</div>
+                <div className="text-xs text-incense-500">总缺口</div>
                 <div className="font-medium text-warning-critical">{suggestion.gap} {suggestion.unit}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-incense-500">订单需求缺口</div>
+                <div className="font-medium text-incense-700">{suggestion.demandGap} {suggestion.unit}</div>
+              </div>
+              <div className="space-y-1">
+                <div className="text-xs text-incense-500">安全库存缺口</div>
+                <div className="font-medium text-sandal-600">{suggestion.safetyStockGap} {suggestion.unit}</div>
               </div>
             </div>
 
@@ -154,7 +170,7 @@ export const PurchaseSuggestionPanel: React.FC<PurchaseSuggestionPanelProps> = (
                           {order.daysToDelivery > 0 ? `${order.daysToDelivery}天后交货` : `已逾期${Math.abs(order.daysToDelivery)}天`}
                         </div>
                       </div>
-                      <Badge variant={order.priority as any} className="ml-2">
+                      <Badge variant={order.priority as BadgeProps['variant']} className="ml-2">
                         {order.priority === 'high' ? '高' : order.priority === 'medium' ? '中' : '低'}
                       </Badge>
                     </div>

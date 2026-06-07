@@ -1,7 +1,7 @@
 import React from 'react';
 import { clsx } from 'clsx';
 
-interface BadgeProps {
+export interface BadgeProps {
   variant?: 'high' | 'medium' | 'low' | 'success' | 'warning' | 'critical' | 'info';
   children: React.ReactNode;
   className?: string;

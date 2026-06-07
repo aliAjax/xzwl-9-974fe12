@@ -101,6 +101,8 @@ export interface PurchaseSuggestionIngredient {
   expiryDate: string;
   daysToExpiry: number;
   pendingDemand: number;
+  demandGap: number;
+  safetyStockGap: number;
   gap: number;
   suggestedPurchase: number;
   priority: 'critical' | 'high' | 'medium' | 'low';
