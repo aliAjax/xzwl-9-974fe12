@@ -14,6 +14,7 @@ import {
   StepUpdateData,
   CustomerOrderSummary,
   RiskLevel,
+  CustomerDeliveryBoardState,
 } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
