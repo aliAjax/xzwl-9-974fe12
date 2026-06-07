@@ -45,7 +45,6 @@ export const calculateDeliveryWarnings = (order: Order): Warning[] => {
   const daysToDelivery = daysBetween(getToday(), order.deliveryDate);
 
   const incompleteSteps = order.steps.filter((s) => s.status !== 'completed');
-  const remainingDays = incompleteSteps.reduce((sum, s) => sum + s.durationDays, 0);
 
   const currentStep = order.steps.find((s) => s.status === 'in_progress');
   if (currentStep) {

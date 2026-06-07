@@ -26,8 +26,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ stepType, orders }) 
 
   const handleMoveNext = (orderId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (nextStep) {
-      moveOrderToStep(orderId, nextStep);
+    const order = orders.find((item) => item.id === orderId);
+    const targetStep = order?.status === 'pending' ? stepType : nextStep;
+
+    if (targetStep) {
+      moveOrderToStep(orderId, targetStep);
     }
   };
 
@@ -57,7 +60,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ stepType, orders }) 
           orders.map((order) => (
             <div key={order.id} className="relative group">
               <OrderCard order={order} />
-              {nextStep && (
+              {(nextStep || order.status === 'pending') && (
                 <button
                   onClick={(e) => handleMoveNext(order.id, e)}
                   className={clsx(
@@ -66,7 +69,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({ stepType, orders }) 
                     'bg-incense-600 hover:bg-incense-700 text-white p-1 rounded-full',
                     'shadow-md hover:shadow-lg'
                   )}
-                  title={`移至${STEP_CONFIG[nextStep].name}`}
+                  title={
+                    order.status === 'pending'
+                      ? `开始${config.name}`
+                      : `移至${STEP_CONFIG[nextStep].name}`
+                  }
                 >
                   <ChevronRight size={14} />
                 </button>

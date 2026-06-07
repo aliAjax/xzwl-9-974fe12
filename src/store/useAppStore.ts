@@ -1,9 +1,5 @@
 import { create } from 'zustand';
 import {
-  Order,
-  Recipe,
-  IngredientBatch,
-  Warning,
   AppState,
   AppActions,
   StepType,
@@ -76,7 +72,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         if (o.id !== orderId) return o;
 
         let runningDate = today;
-        const updatedSteps = o.steps.map((step, index) => {
+        const updatedSteps = o.steps.map((step) => {
           const stepIndex = STEP_ORDER.indexOf(step.stepType);
           let newStatus: StepStatus = step.status;
           let newStartDate = step.startDate;
@@ -124,6 +120,26 @@ export const useAppStore = create<AppStore>((set, get) => ({
     get().recalculateWarnings();
   },
 
+  completeOrder: (orderId: string) => {
+    set((state) => ({
+      orders: state.orders.map((order) => {
+        if (order.id !== orderId) return order;
+
+        return {
+          ...order,
+          status: 'completed',
+          currentStepIndex: STEP_ORDER.length,
+          steps: order.steps.map((step) => ({
+            ...step,
+            status: 'completed',
+            assignee: '',
+          })),
+        };
+      }),
+    }));
+    get().recalculateWarnings();
+  },
+
   resolveWarning: (warningId: string) => {
     set((state) => ({
       warnings: state.warnings.map((w) =>
@@ -150,6 +166,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   getOrdersByStep: (stepType: StepType) => {
     return get().orders.filter((order) => {
       if (order.status === 'completed') return false;
+      if (order.status === 'pending') return stepType === STEP_ORDER[0];
       const currentStep = order.steps.find((s) => s.status === 'in_progress');
       return currentStep?.stepType === stepType;
     });

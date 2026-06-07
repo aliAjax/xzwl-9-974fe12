@@ -8,7 +8,14 @@ import { ProductionStep, StepStatus, STEP_ORDER, STEP_CONFIG } from '../../types
 import { clsx } from 'clsx';
 
 const OrderDetailModal: React.FC = () => {
-  const { selectedOrderId, setSelectedOrderId, getRecipeById, getOrderWarnings, moveOrderToStep } = useAppStore();
+  const {
+    selectedOrderId,
+    setSelectedOrderId,
+    getRecipeById,
+    getOrderWarnings,
+    moveOrderToStep,
+    completeOrder,
+  } = useAppStore();
 
   const order = useAppStore((state) => state.orders.find((o) => o.id === selectedOrderId));
   const recipe = order ? getRecipeById(order.recipeId) : undefined;
@@ -37,13 +44,26 @@ const OrderDetailModal: React.FC = () => {
 
   const handleMoveNext = () => {
     const currentStepIndex = order.steps.findIndex((s) => s.status === 'in_progress');
-    if (currentStepIndex >= 0) {
-      const nextStepType = STEP_ORDER[currentStepIndex + 1];
-      if (nextStepType) {
-        moveOrderToStep(order.id, nextStepType);
-      }
+    if (currentStepIndex < 0) {
+      moveOrderToStep(order.id, STEP_ORDER[0]);
+      return;
+    }
+
+    const nextStepType = STEP_ORDER[currentStepIndex + 1];
+    if (nextStepType) {
+      moveOrderToStep(order.id, nextStepType);
+    } else {
+      completeOrder(order.id);
     }
   };
+
+  const currentStepIndex = order.steps.findIndex((s) => s.status === 'in_progress');
+  const actionLabel =
+    currentStepIndex < 0
+      ? `开始${STEP_CONFIG[STEP_ORDER[0]].name}`
+      : currentStepIndex === STEP_ORDER.length - 1
+        ? '完成订单'
+        : '完成当前步骤，进入下一工序';
 
   const priorityLabel = {
     high: '高优先级',
@@ -186,7 +206,7 @@ const OrderDetailModal: React.FC = () => {
                   className="w-full btn-primary flex items-center justify-center gap-2"
                 >
                   <CheckCircle size={16} />
-                  完成当前步骤，进入下一工序
+                  {actionLabel}
                 </button>
               </div>
             )}

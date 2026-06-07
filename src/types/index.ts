@@ -95,6 +95,7 @@ export interface AppActions {
   setShowWarningPanel: (show: boolean) => void;
   updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => void;
   moveOrderToStep: (orderId: string, stepType: StepType) => void;
+  completeOrder: (orderId: string) => void;
   resolveWarning: (warningId: string) => void;
   recalculateWarnings: () => void;
   getOrderWarnings: (orderId: string) => Warning[];

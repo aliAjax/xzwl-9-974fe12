@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday as isDateToday, getDay, startOfWeek, endOfWeek } from 'date-fns';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, getDay, startOfWeek, endOfWeek } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 import { CalendarEvent } from './CalendarEvent';
 import { useAppStore } from '../../store/useAppStore';
@@ -10,7 +10,7 @@ import { clsx } from 'clsx';
 const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 
 export const CalendarGrid: React.FC = () => {
-  const { orders, setSelectedOrderId, getOrdersByDate } = useAppStore();
+  const { orders, setSelectedOrderId } = useAppStore();
   const [currentMonth, setCurrentMonth] = useState(new Date('2026-06-07'));
 
   const monthStart = startOfMonth(currentMonth);
@@ -27,10 +27,7 @@ export const CalendarGrid: React.FC = () => {
     return orders.filter((order) => {
       if (order.status === 'completed') return false;
       return order.steps.some(
-        (step) =>
-          step.status !== 'not_started' &&
-          step.startDate <= dateStr &&
-          step.endDate >= dateStr
+        (step) => step.startDate <= dateStr && step.endDate >= dateStr
       );
     });
   };
@@ -75,7 +72,7 @@ export const CalendarGrid: React.FC = () => {
           </div>
         ))}
 
-        {days.map((day, index) => {
+        {days.map((day) => {
           const dayOrders = getOrdersForDate(day);
           const dateStr = format(day, 'yyyy-MM-dd');
           const isCurrentMonth = isSameMonth(day, currentMonth);
@@ -105,18 +102,13 @@ export const CalendarGrid: React.FC = () => {
                 {format(day, 'd')}
               </div>
               <div className="space-y-1 max-h-[90px] overflow-y-auto scrollbar-thin">
-                {dayOrders.slice(0, 3).map((order) => (
+                {dayOrders.map((order) => (
                   <CalendarEvent
                     key={order.id}
                     order={order}
                     onClick={() => setSelectedOrderId(order.id)}
                   />
                 ))}
-                {dayOrders.length > 3 && (
-                  <div className="text-xs text-incense-500 text-center">
-                    +{dayOrders.length - 3} 更多
-                  </div>
-                )}
               </div>
             </div>
           );
