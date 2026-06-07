@@ -2,7 +2,7 @@ import { Order, Recipe, IngredientBatch, Warning, ViewType, CustomerDeliveryBoar
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
 import { mockIngredients } from '../data/mockIngredients';
-import { calculateAllWarnings } from './warningUtils';
+import { calculateAllWarnings, mergeWarningsWithResolvedState } from './warningUtils';
 
 const STORAGE_KEY = 'xzwl-app-state';
 const CURRENT_VERSION = 2;
@@ -36,24 +36,48 @@ export interface DefaultDataResult {
   viewPreferences: PersistentViewPreferences;
 }
 
-type MigrationFn = (data: any) => any;
+type MigrationFn = (data: unknown) => PersistentAppData;
 
 const migrations: Record<number, MigrationFn> = {
-  1: (data: any) => {
-    console.log('[Storage] Running migration v1 -> v2');
+  0: (data: unknown) => {
+    console.log('[Storage] Running migration v0 -> v1');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data as Record<string, any>;
     return {
-      ...data,
+      ...d,
+      version: 1,
+      viewPreferences: d.viewPreferences || {
+        currentView: 'kanban',
+        selectedDate: new Date().toISOString().split('T')[0],
+        showIngredientPanel: false,
+        showWarningPanel: false,
+        showRecipePanel: false,
+        showSchedulePanel: false,
+        showPurchaseSuggestion: false,
+      },
+      orders: d.orders || [],
+      recipes: d.recipes || [],
+      ingredients: d.ingredients || [],
+      warnings: d.warnings || [],
+    } as PersistentAppData;
+  },
+  1: (data: unknown) => {
+    console.log('[Storage] Running migration v1 -> v2');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d = data as Record<string, any>;
+    return {
+      ...d,
       version: 2,
       viewPreferences: {
-        ...data.viewPreferences,
-        deliveryBoard: data.viewPreferences.deliveryBoard || {
+        ...d.viewPreferences,
+        deliveryBoard: d.viewPreferences?.deliveryBoard || {
           showCompletedOrders: false,
           sortBy: 'deliveryDate',
           filterRiskLevel: 'all',
           expandedCustomers: [],
         },
       },
-    };
+    } as PersistentAppData;
   },
 };
 
@@ -106,7 +130,7 @@ export const loadFromStorage = (): DefaultDataResult | null => {
       return null;
     }
 
-    let data: any = JSON.parse(raw);
+    let data: PersistentAppData = JSON.parse(raw);
 
     if (!data.version || data.version < CURRENT_VERSION) {
       console.log(`[Storage] Migrating data from v${data.version || 0} to v${CURRENT_VERSION}`);
@@ -119,11 +143,18 @@ export const loadFromStorage = (): DefaultDataResult | null => {
     }
 
     console.log('[Storage] Data loaded successfully, version:', data.version);
+
+    const existingResolved = (data.warnings || []).filter((w: Warning) => w.isResolved);
+    const recalculatedWarnings = calculateAllWarnings(data.orders, data.ingredients, data.recipes);
+    const mergedWarnings = mergeWarningsWithResolvedState(recalculatedWarnings, existingResolved);
+
+    console.log(`[Storage] Recalculated warnings: ${recalculatedWarnings.length} total, ${existingResolved.length} resolved states preserved`);
+
     return {
       orders: data.orders,
       recipes: data.recipes,
       ingredients: data.ingredients,
-      warnings: data.warnings,
+      warnings: mergedWarnings,
       viewPreferences: data.viewPreferences,
     };
   } catch (error) {
@@ -132,8 +163,8 @@ export const loadFromStorage = (): DefaultDataResult | null => {
   }
 };
 
-const runMigrations = (data: any): any => {
-  let migratedData = { ...data };
+const runMigrations = (data: PersistentAppData): PersistentAppData => {
+  let migratedData: PersistentAppData = { ...data };
   const startVersion = migratedData.version || 0;
 
   for (let v = startVersion; v < CURRENT_VERSION; v++) {

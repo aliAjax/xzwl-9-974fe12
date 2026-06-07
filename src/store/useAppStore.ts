@@ -16,11 +16,8 @@ import {
   RiskLevel,
   CustomerDeliveryBoardState,
 } from '../types';
-import { mockOrders } from '../data/mockOrders';
-import { mockRecipes } from '../data/mockRecipes';
-import { mockIngredients } from '../data/mockIngredients';
 import { mockCraftsmen } from '../data/mockCraftsmen';
-import { calculateAllWarnings } from '../utils/warningUtils';
+import { calculateAllWarnings, mergeWarningsWithResolvedState } from '../utils/warningUtils';
 import { calculatePurchaseSuggestions } from '../utils/purchaseUtils';
 import { getToday, addDaysToDate, isDateBefore, daysBetween } from '../utils/dateUtils';
 import { applyStepAdjustment, validateStepAdjustment } from '../utils/scheduleUtils';
@@ -582,7 +579,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const { orders, ingredients, recipes } = get();
     const existingResolved = get().warnings.filter((w) => w.isResolved);
     const newWarnings = calculateAllWarnings(orders, ingredients, recipes);
-    set({ warnings: [...existingResolved, ...newWarnings] });
+    const mergedWarnings = mergeWarningsWithResolvedState(newWarnings, existingResolved);
+    set({ warnings: mergedWarnings });
   },
 
   recalculatePurchaseSuggestions: () => {

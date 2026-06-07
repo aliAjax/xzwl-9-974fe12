@@ -167,3 +167,32 @@ export const getUnresolvedWarnings = (warnings: Warning[]): Warning[] => {
 export const getWarningsByType = (warnings: Warning[], type: Warning['type']): Warning[] => {
   return warnings.filter((w) => w.type === type && !w.isResolved);
 };
+
+export const getWarningKey = (warning: Warning): string => {
+  return `${warning.type}-${warning.relatedId}-${warning.level}`;
+};
+
+export const mergeWarningsWithResolvedState = (
+  newWarnings: Warning[],
+  existingResolvedWarnings: Warning[]
+): Warning[] => {
+  const resolvedKeys = new Set(existingResolvedWarnings.map(getWarningKey));
+
+  const merged = newWarnings.map((warning) => {
+    const key = getWarningKey(warning);
+    if (resolvedKeys.has(key)) {
+      return { ...warning, isResolved: true };
+    }
+    return warning;
+  });
+
+  const remainingResolved = existingResolvedWarnings.filter((w) => {
+    const key = getWarningKey(w);
+    return !merged.some((m) => getWarningKey(m) === key);
+  });
+
+  return [...remainingResolved, ...merged].sort((a, b) => {
+    const levelOrder = { critical: 0, warning: 1, info: 2 };
+    return levelOrder[a.level] - levelOrder[b.level];
+  });
+};
