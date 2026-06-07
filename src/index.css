@@ -187,6 +187,7 @@ body {
   nav,
   aside,
   .bg-black\/50,
+  .bg-black\/40,
   .backdrop-blur-sm {
     display: none !important;
   }

@@ -49,6 +49,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   showRecipeModal: false,
   showSchedulePanel: false,
   showPrintPreview: false,
+  printOrderId: null,
   editingRecipeId: null,
 
   setCurrentView: (view: ViewType) => set({ currentView: view }),
@@ -70,6 +71,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setShowSchedulePanel: (show: boolean) => set({ showSchedulePanel: show }),
 
   setShowPrintPreview: (show: boolean) => set({ showPrintPreview: show }),
+
+  setPrintOrderId: (id: string | null) => set({ printOrderId: id }),
 
   setEditingRecipeId: (id: string | null) => set({ editingRecipeId: id }),
 

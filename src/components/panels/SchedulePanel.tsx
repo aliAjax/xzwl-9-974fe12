@@ -89,7 +89,7 @@ export const SchedulePanel: React.FC<SchedulePanelProps> = ({ onClose }) => {
   const selectedCraftsman = craftsmen.find((c) => c.id === selectedCraftsmanId);
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex justify-end print:hidden">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}

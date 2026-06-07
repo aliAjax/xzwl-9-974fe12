@@ -168,9 +168,9 @@ const RecipeModal: React.FC = () => {
   if (!showRecipeModal) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden">
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm print:hidden"
         onClick={handleClose}
       />
       <div ref={modalRef} className="relative w-full max-w-3xl max-h-[90vh] bg-incense-50 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up">

@@ -16,6 +16,7 @@ const OrderDetailModal: React.FC = () => {
     moveOrderToStep,
     completeOrder,
     setShowPrintPreview,
+    setPrintOrderId,
   } = useAppStore();
 
   const order = useAppStore((state) => state.orders.find((o) => o.id === selectedOrderId));
@@ -73,11 +74,17 @@ const OrderDetailModal: React.FC = () => {
   };
 
   const handlePrintOrder = () => {
-    setShowPrintPreview(true);
+    if (selectedOrderId) {
+      setPrintOrderId(selectedOrderId);
+    }
+    setSelectedOrderId(null);
+    setTimeout(() => {
+      setShowPrintPreview(true);
+    }, 50);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => setSelectedOrderId(null)}

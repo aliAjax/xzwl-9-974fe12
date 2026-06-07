@@ -36,7 +36,7 @@ export const WarningPanel: React.FC<WarningPanelProps> = ({ onClose }) => {
   const types: (WarningType | 'all')[] = ['all', 'drying', 'delivery', 'ingredient', 'inventory'];
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
+    <div className="fixed inset-0 z-50 flex justify-end print:hidden">
       <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={onClose}

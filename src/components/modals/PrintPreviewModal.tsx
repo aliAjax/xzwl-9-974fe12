@@ -7,15 +7,15 @@ import { clsx } from 'clsx';
 
 const PrintPreviewModal: React.FC = () => {
   const {
-    selectedOrderId,
+    printOrderId,
     showPrintPreview,
     setShowPrintPreview,
-    setSelectedOrderId,
+    setPrintOrderId,
     getRecipeById,
     getOrderWarnings,
   } = useAppStore();
 
-  const order = useAppStore((state) => state.orders.find((o) => o.id === selectedOrderId));
+  const order = useAppStore((state) => state.orders.find((o) => o.id === printOrderId));
   const recipe = order ? getRecipeById(order.recipeId) : undefined;
   const warnings = order ? getOrderWarnings(order.id) : [];
 
@@ -64,7 +64,7 @@ const PrintPreviewModal: React.FC = () => {
 
   const handleClose = () => {
     setShowPrintPreview(false);
-    setSelectedOrderId(null);
+    setPrintOrderId(null);
   };
 
   const totalIngredients = recipe.ingredients.reduce((sum, ing) => sum + ing.quantity, 0);
