@@ -1,4 +1,4 @@
-import { Order, ProductionStep, StepAdjustPreview, ScheduleAdjustPreview, Warning, Recipe, STEP_ORDER } from '../types';
+import { Order, ProductionStep, StepAdjustPreview, ScheduleAdjustPreview, Warning, Recipe } from '../types';
 import { addDaysToDate, daysBetween, isDateBefore } from './dateUtils';
 import { calculateDryingWarnings, calculateDeliveryWarnings } from './warningUtils';
 

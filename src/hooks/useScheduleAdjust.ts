@@ -2,7 +2,6 @@ import { useState, useMemo, useCallback } from 'react';
 import { Order, Recipe, StepUpdateData, ScheduleAdjustPreview } from '../types';
 import {
   calculateStepAdjustPreview,
-  applyStepAdjustment,
   validateStepAdjustment,
 } from '../utils/scheduleUtils';
 

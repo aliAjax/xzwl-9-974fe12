@@ -16,7 +16,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useScheduleAdjust } from '../../hooks/useScheduleAdjust';
 import { formatDateChinese, getDaysRemaining } from '../../utils/dateUtils';
 import { getStepAdjustTooltip } from '../../utils/scheduleUtils';
-import { ProductionStep, StepStatus, STEP_CONFIG, Warning } from '../../types';
+import { ProductionStep, StepStatus, STEP_CONFIG, StepUpdateData, Warning } from '../../types';
 import { clsx } from 'clsx';
 
 const ScheduleAdjustModal: React.FC = () => {
@@ -40,7 +40,7 @@ const ScheduleAdjustModal: React.FC = () => {
     setShowScheduleAdjustModal(false);
   };
 
-  const handleApply = (orderId: string, stepId: string, updates: any) => {
+  const handleApply = (orderId: string, stepId: string, updates: StepUpdateData) => {
     updateProductionStep(orderId, stepId, updates);
   };
 
