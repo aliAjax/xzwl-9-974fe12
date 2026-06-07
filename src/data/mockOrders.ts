@@ -4,6 +4,17 @@ import { addDays, formatISO } from 'date-fns';
 
 const today = new Date('2026-06-07');
 
+const orderAssignees: Record<string, string> = {
+  'order-001': '张师傅',
+  'order-002': '李师傅',
+  'order-003': '李师傅',
+  'order-004': '王师傅',
+  'order-005': '刘师傅',
+  'order-006': '赵师傅',
+  'order-007': '',
+  'order-008': '',
+};
+
 const createSteps = (
   orderId: string,
   recipeId: string,
@@ -45,6 +56,14 @@ const createSteps = (
       status = 'in_progress';
     }
 
+    const defaultAssignee = orderAssignees[orderId] || '';
+    let assignee = '';
+    if (index === currentStepIndex) {
+      assignee = defaultAssignee || '李师傅';
+    } else if (index < currentStepIndex) {
+      assignee = defaultAssignee;
+    }
+
     return {
       id: `${orderId}-step-${index}`,
       orderId,
@@ -55,7 +74,7 @@ const createSteps = (
       endDate: formatISO(endDate, { representation: 'date' }),
       durationDays: duration,
       notes: '',
-      assignee: index === currentStepIndex ? '李师傅' : '',
+      assignee,
     };
   });
 };

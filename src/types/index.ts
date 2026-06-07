@@ -75,6 +75,14 @@ export interface Warning {
   isResolved: boolean;
 }
 
+export interface Craftsman {
+  id: string;
+  name: string;
+  avatar: string;
+  skills: StepType[];
+  status: 'available' | 'working' | 'rest';
+}
+
 export interface RecipeFormData {
   name: string;
   description: string;
@@ -88,6 +96,7 @@ export interface AppState {
   orders: Order[];
   recipes: Recipe[];
   ingredients: IngredientBatch[];
+  craftsmen: Craftsman[];
   warnings: Warning[];
   currentView: ViewType;
   selectedDate: string;
@@ -97,6 +106,7 @@ export interface AppState {
   showCreateOrderModal: boolean;
   showRecipePanel: boolean;
   showRecipeModal: boolean;
+  showSchedulePanel: boolean;
   editingRecipeId: string | null;
 }
 
@@ -118,12 +128,14 @@ export interface AppActions {
   setShowCreateOrderModal: (show: boolean) => void;
   setShowRecipePanel: (show: boolean) => void;
   setShowRecipeModal: (show: boolean) => void;
+  setShowSchedulePanel: (show: boolean) => void;
   setEditingRecipeId: (id: string | null) => void;
   createRecipe: (data: RecipeFormData) => Recipe;
   updateRecipe: (id: string, data: RecipeFormData) => Recipe;
   deleteRecipe: (id: string) => void;
   createOrder: (data: CreateOrderData) => Order;
   updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => void;
+  assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => void;
   moveOrderToStep: (orderId: string, stepType: StepType) => void;
   completeOrder: (orderId: string) => void;
   resolveWarning: (warningId: string) => void;
@@ -132,6 +144,7 @@ export interface AppActions {
   getRecipeById: (recipeId: string) => Recipe | undefined;
   getOrdersByStep: (stepType: StepType) => Order[];
   getOrdersByDate: (date: string) => Order[];
+  getCraftsmanTasks: (craftsmanId: string) => { order: Order; step: ProductionStep }[];
 }
 
 export const STEP_CONFIG: Record<StepType, { name: string; icon: string; color: string }> = {

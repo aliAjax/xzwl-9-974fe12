@@ -1,4 +1,5 @@
 import React from 'react';
+import { User } from 'lucide-react';
 import { Order, STEP_CONFIG } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { clsx } from 'clsx';
@@ -36,11 +37,19 @@ export const CalendarEvent: React.FC<CalendarEventProps> = ({ order, onClick }) 
       <div className="font-medium text-incense-800 truncate">{order.orderNo}</div>
       <div className="text-incense-600 text-[10px] truncate">{recipe?.name}</div>
       {currentStep && (
-        <div
-          className="text-[10px] mt-0.5 px-1 py-0.5 rounded inline-block text-white"
-          style={{ backgroundColor: stepColor }}
-        >
-          {currentStep.stepName}
+        <div className="flex items-center gap-1 mt-0.5">
+          <div
+            className="text-[10px] px-1 py-0.5 rounded inline-block text-white"
+            style={{ backgroundColor: stepColor }}
+          >
+            {currentStep.stepName}
+          </div>
+          {currentStep.assignee && (
+            <div className="flex items-center gap-0.5 text-[10px] text-incense-500">
+              <User size={10} />
+              <span>{currentStep.assignee}</span>
+            </div>
+          )}
         </div>
       )}
     </div>

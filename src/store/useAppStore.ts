@@ -10,10 +10,12 @@ import {
   Order,
   Recipe,
   RecipeFormData,
+  ProductionStep,
 } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
 import { mockIngredients } from '../data/mockIngredients';
+import { mockCraftsmen } from '../data/mockCraftsmen';
 import { calculateAllWarnings } from '../utils/warningUtils';
 import { getToday, addDaysToDate } from '../utils/dateUtils';
 
@@ -35,6 +37,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   orders: mockOrders,
   recipes: mockRecipes,
   ingredients: mockIngredients,
+  craftsmen: mockCraftsmen,
   warnings: initialWarnings,
   currentView: 'kanban',
   selectedDate: getToday(),
@@ -44,6 +47,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   showCreateOrderModal: false,
   showRecipePanel: false,
   showRecipeModal: false,
+  showSchedulePanel: false,
   editingRecipeId: null,
 
   setCurrentView: (view: ViewType) => set({ currentView: view }),
@@ -61,6 +65,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setShowRecipePanel: (show: boolean) => set({ showRecipePanel: show }),
 
   setShowRecipeModal: (show: boolean) => set({ showRecipeModal: show }),
+
+  setShowSchedulePanel: (show: boolean) => set({ showSchedulePanel: show }),
 
   setEditingRecipeId: (id: string | null) => set({ editingRecipeId: id }),
 
@@ -206,6 +212,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
     get().recalculateWarnings();
   },
 
+  assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => {
+    set((state) => ({
+      orders: state.orders.map((order) => {
+        if (order.id !== orderId) return order;
+        return {
+          ...order,
+          steps: order.steps.map((step) => {
+            if (step.id !== stepId) return step;
+            return { ...step, assignee: craftsmanName };
+          }),
+        };
+      }),
+    }));
+  },
+
   moveOrderToStep: (orderId: string, targetStepType: StepType) => {
     const { orders, recipes } = get();
     const order = orders.find((o) => o.id === orderId);
@@ -333,5 +354,17 @@ export const useAppStore = create<AppStore>((set, get) => ({
           step.endDate >= date
       );
     });
+  },
+
+  getCraftsmanTasks: (craftsmanName: string) => {
+    const tasks: { order: Order; step: ProductionStep }[] = [];
+    get().orders.forEach((order) => {
+      order.steps.forEach((step) => {
+        if (step.assignee === craftsmanName) {
+          tasks.push({ order, step });
+        }
+      });
+    });
+    return tasks;
   },
 }));

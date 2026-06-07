@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Plus, BookOpen } from 'lucide-react';
+import { Package, Plus, BookOpen, Users } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { Header } from '../components/layout/Header';
 import { StatsCards } from '../components/layout/StatsCards';
@@ -11,6 +11,7 @@ import RecipeModal from '../components/modals/RecipeModal';
 import { WarningPanel } from '../components/panels/WarningPanel';
 import { IngredientPanel } from '../components/panels/IngredientPanel';
 import { RecipePanel } from '../components/panels/RecipePanel';
+import { SchedulePanel } from '../components/panels/SchedulePanel';
 
 const Home: React.FC = () => {
   const {
@@ -21,12 +22,15 @@ const Home: React.FC = () => {
     showCreateOrderModal,
     showRecipePanel,
     showRecipeModal,
+    showSchedulePanel,
     setShowWarningPanel,
     setShowIngredientPanel,
     setShowCreateOrderModal,
     setShowRecipePanel,
+    setShowSchedulePanel,
     ingredients,
     recipes,
+    craftsmen,
   } = useAppStore();
 
   const lowStockIngredients = ingredients.filter(
@@ -77,6 +81,16 @@ const Home: React.FC = () => {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setShowSchedulePanel(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-incense-200 rounded-lg hover:bg-incense-50 transition-colors shadow-sm"
+            >
+              <Users size={18} className="text-incense-600" />
+              <span className="text-incense-700">排班管理</span>
+              <span className="bg-incense-100 text-incense-600 text-xs px-2 py-0.5 rounded-full">
+                {craftsmen.length}
+              </span>
+            </button>
           </div>
         </div>
 
@@ -105,6 +119,10 @@ const Home: React.FC = () => {
 
       {showRecipePanel && (
         <RecipePanel onClose={() => setShowRecipePanel(false)} />
+      )}
+
+      {showSchedulePanel && (
+        <SchedulePanel onClose={() => setShowSchedulePanel(false)} />
       )}
     </div>
   );
