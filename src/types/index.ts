@@ -75,6 +75,15 @@ export interface Warning {
   isResolved: boolean;
 }
 
+export interface RecipeFormData {
+  name: string;
+  description: string;
+  ingredients: RecipeIngredient[];
+  dryingDays: number;
+  cellaringDays: number;
+  craftNotes: string;
+}
+
 export interface AppState {
   orders: Order[];
   recipes: Recipe[];
@@ -86,6 +95,9 @@ export interface AppState {
   showIngredientPanel: boolean;
   showWarningPanel: boolean;
   showCreateOrderModal: boolean;
+  showRecipePanel: boolean;
+  showRecipeModal: boolean;
+  editingRecipeId: string | null;
 }
 
 export interface CreateOrderData {
@@ -104,6 +116,12 @@ export interface AppActions {
   setShowIngredientPanel: (show: boolean) => void;
   setShowWarningPanel: (show: boolean) => void;
   setShowCreateOrderModal: (show: boolean) => void;
+  setShowRecipePanel: (show: boolean) => void;
+  setShowRecipeModal: (show: boolean) => void;
+  setEditingRecipeId: (id: string | null) => void;
+  createRecipe: (data: RecipeFormData) => Recipe;
+  updateRecipe: (id: string, data: RecipeFormData) => Recipe;
+  deleteRecipe: (id: string) => void;
   createOrder: (data: CreateOrderData) => Order;
   updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => void;
   moveOrderToStep: (orderId: string, stepType: StepType) => void;

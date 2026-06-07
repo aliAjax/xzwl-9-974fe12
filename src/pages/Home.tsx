@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Plus } from 'lucide-react';
+import { Package, Plus, BookOpen } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { Header } from '../components/layout/Header';
 import { StatsCards } from '../components/layout/StatsCards';
@@ -7,8 +7,10 @@ import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import OrderDetailModal from '../components/modals/OrderDetailModal';
 import CreateOrderModal from '../components/modals/CreateOrderModal';
+import RecipeModal from '../components/modals/RecipeModal';
 import { WarningPanel } from '../components/panels/WarningPanel';
 import { IngredientPanel } from '../components/panels/IngredientPanel';
+import { RecipePanel } from '../components/panels/RecipePanel';
 
 const Home: React.FC = () => {
   const {
@@ -17,10 +19,14 @@ const Home: React.FC = () => {
     showWarningPanel,
     showIngredientPanel,
     showCreateOrderModal,
+    showRecipePanel,
+    showRecipeModal,
     setShowWarningPanel,
     setShowIngredientPanel,
     setShowCreateOrderModal,
+    setShowRecipePanel,
     ingredients,
+    recipes,
   } = useAppStore();
 
   const lowStockIngredients = ingredients.filter(
@@ -50,6 +56,16 @@ const Home: React.FC = () => {
               <span>创建订单</span>
             </button>
             <button
+              onClick={() => setShowRecipePanel(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-incense-200 rounded-lg hover:bg-incense-50 transition-colors shadow-sm"
+            >
+              <BookOpen size={18} className="text-incense-600" />
+              <span className="text-incense-700">香方管理</span>
+              <span className="bg-incense-100 text-incense-600 text-xs px-2 py-0.5 rounded-full">
+                {recipes.length}
+              </span>
+            </button>
+            <button
               onClick={() => setShowIngredientPanel(true)}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-incense-200 rounded-lg hover:bg-incense-50 transition-colors shadow-sm"
             >
@@ -77,12 +93,18 @@ const Home: React.FC = () => {
 
       {showCreateOrderModal && <CreateOrderModal />}
 
+      {showRecipeModal && <RecipeModal />}
+
       {showWarningPanel && (
         <WarningPanel onClose={() => setShowWarningPanel(false)} />
       )}
 
       {showIngredientPanel && (
         <IngredientPanel onClose={() => setShowIngredientPanel(false)} />
+      )}
+
+      {showRecipePanel && (
+        <RecipePanel onClose={() => setShowRecipePanel(false)} />
       )}
     </div>
   );

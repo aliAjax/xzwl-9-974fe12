@@ -8,6 +8,8 @@ import {
   STEP_ORDER,
   CreateOrderData,
   Order,
+  Recipe,
+  RecipeFormData,
 } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
@@ -27,6 +29,8 @@ const generateOrderNo = (): string => {
   return `XY-${yearMonth}-${random}`;
 };
 
+const generateRecipeId = (): string => `recipe-${Date.now().toString().slice(-6)}`;
+
 export const useAppStore = create<AppStore>((set, get) => ({
   orders: mockOrders,
   recipes: mockRecipes,
@@ -38,6 +42,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
   showIngredientPanel: false,
   showWarningPanel: false,
   showCreateOrderModal: false,
+  showRecipePanel: false,
+  showRecipeModal: false,
+  editingRecipeId: null,
 
   setCurrentView: (view: ViewType) => set({ currentView: view }),
 
@@ -50,6 +57,63 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setShowWarningPanel: (show: boolean) => set({ showWarningPanel: show }),
 
   setShowCreateOrderModal: (show: boolean) => set({ showCreateOrderModal: show }),
+
+  setShowRecipePanel: (show: boolean) => set({ showRecipePanel: show }),
+
+  setShowRecipeModal: (show: boolean) => set({ showRecipeModal: show }),
+
+  setEditingRecipeId: (id: string | null) => set({ editingRecipeId: id }),
+
+  createRecipe: (data: RecipeFormData): Recipe => {
+    const recipeId = generateRecipeId();
+
+    const newRecipe: Recipe = {
+      id: recipeId,
+      name: data.name,
+      description: data.description,
+      ingredients: data.ingredients,
+      dryingDays: data.dryingDays,
+      cellaringDays: data.cellaringDays,
+      craftNotes: data.craftNotes,
+    };
+
+    set((state) => ({
+      recipes: [...state.recipes, newRecipe],
+      showRecipeModal: false,
+      editingRecipeId: null,
+    }));
+
+    return newRecipe;
+  },
+
+  updateRecipe: (id: string, data: RecipeFormData): Recipe => {
+    const updatedRecipe: Recipe = {
+      id,
+      name: data.name,
+      description: data.description,
+      ingredients: data.ingredients,
+      dryingDays: data.dryingDays,
+      cellaringDays: data.cellaringDays,
+      craftNotes: data.craftNotes,
+    };
+
+    set((state) => ({
+      recipes: state.recipes.map((r) => (r.id === id ? updatedRecipe : r)),
+      showRecipeModal: false,
+      editingRecipeId: null,
+    }));
+
+    get().recalculateWarnings();
+
+    return updatedRecipe;
+  },
+
+  deleteRecipe: (id: string) => {
+    set((state) => ({
+      recipes: state.recipes.filter((r) => r.id !== id),
+    }));
+    get().recalculateWarnings();
+  },
 
   createOrder: (data: CreateOrderData): Order => {
     const orderId = generateOrderId();
