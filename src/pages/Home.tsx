@@ -5,6 +5,7 @@ import { Header } from '../components/layout/Header';
 import { StatsCards } from '../components/layout/StatsCards';
 import { KanbanBoard } from '../components/kanban/KanbanBoard';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
+import { CustomerDeliveryBoard } from '../components/delivery/CustomerDeliveryBoard';
 import OrderDetailModal from '../components/modals/OrderDetailModal';
 import CreateOrderModal from '../components/modals/CreateOrderModal';
 import RecipeModal from '../components/modals/RecipeModal';
@@ -111,8 +112,10 @@ const Home: React.FC = () => {
 
         {currentView === 'kanban' ? (
           <KanbanBoard />
-        ) : (
+        ) : currentView === 'calendar' ? (
           <CalendarGrid />
+        ) : (
+          <CustomerDeliveryBoard />
         )}
       </main>
 

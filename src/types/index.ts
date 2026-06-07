@@ -34,7 +34,7 @@ export type OrderStatus = 'pending' | 'in_production' | 'completed';
 export type Priority = 'low' | 'medium' | 'high';
 export type WarningType = 'drying' | 'inventory' | 'delivery' | 'ingredient';
 export type WarningLevel = 'info' | 'warning' | 'critical';
-export type ViewType = 'kanban' | 'calendar';
+export type ViewType = 'kanban' | 'calendar' | 'delivery';
 
 export interface ProductionStep {
   id: string;
@@ -134,9 +134,12 @@ export interface AppState {
   showSchedulePanel: boolean;
   showPrintPreview: boolean;
   showPurchaseSuggestion: boolean;
+  showScheduleAdjustModal: boolean;
+  scheduleAdjustOrderId: string | null;
   printOrderId: string | null;
   editingRecipeId: string | null;
   purchaseSuggestions: PurchaseSuggestionIngredient[];
+  deliveryBoard: CustomerDeliveryBoardState;
 }
 
 export interface CreateOrderData {
@@ -190,6 +193,12 @@ export interface AppActions {
   setEditingRecipeId: (id: string | null) => void;
   setShowScheduleAdjustModal: (show: boolean) => void;
   setScheduleAdjustOrderId: (id: string | null) => void;
+  setShowCompletedOrders: (show: boolean) => void;
+  setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) => void;
+  setFilterRiskLevel: (level: RiskLevel | 'all') => void;
+  toggleCustomerExpand: (customerName: string) => void;
+  getCustomerOrderSummaries: () => CustomerOrderSummary[];
+  getCustomerOrderSummary: (customerName: string) => CustomerOrderSummary | undefined;
   createRecipe: (data: RecipeFormData) => Recipe;
   updateRecipe: (id: string, data: RecipeFormData) => Recipe;
   deleteRecipe: (id: string) => void;
@@ -242,3 +251,37 @@ export const STEP_CONFIG: Record<StepType, { name: string; icon: string; color: 
 };
 
 export const STEP_ORDER: StepType[] = ['kneading', 'shaping', 'drying', 'cellaring', 'packaging'];
+
+export type RiskLevel = 'critical' | 'high' | 'medium' | 'low';
+
+export interface CustomerOrderSummary {
+  customerName: string;
+  totalOrders: number;
+  pendingOrders: number;
+  inProductionOrders: number;
+  completedOrders: number;
+  overdueOrders: number;
+  highPriorityOrders: number;
+  earliestDeliveryDate: string;
+  latestDeliveryDate: string;
+  overallProgress: number;
+  riskLevel: RiskLevel;
+  orders: Order[];
+  orderIds: string[];
+}
+
+export interface CustomerDeliveryBoardState {
+  showCompletedOrders: boolean;
+  sortBy: 'deliveryDate' | 'riskLevel' | 'priority' | 'progress';
+  filterRiskLevel: RiskLevel | 'all';
+  expandedCustomers: string[];
+}
+
+export interface CustomerDeliveryBoardActions {
+  setShowCompletedOrders: (show: boolean) => void;
+  setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) => void;
+  setFilterRiskLevel: (level: RiskLevel | 'all') => void;
+  toggleCustomerExpand: (customerName: string) => void;
+  getCustomerOrderSummaries: () => CustomerOrderSummary[];
+  getCustomerOrderSummary: (customerName: string) => CustomerOrderSummary | undefined;
+}

@@ -12,6 +12,8 @@ import {
   RecipeFormData,
   ProductionStep,
   StepUpdateData,
+  CustomerOrderSummary,
+  RiskLevel,
 } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
@@ -19,7 +21,7 @@ import { mockIngredients } from '../data/mockIngredients';
 import { mockCraftsmen } from '../data/mockCraftsmen';
 import { calculateAllWarnings } from '../utils/warningUtils';
 import { calculatePurchaseSuggestions } from '../utils/purchaseUtils';
-import { getToday, addDaysToDate } from '../utils/dateUtils';
+import { getToday, addDaysToDate, isDateBefore, daysBetween } from '../utils/dateUtils';
 import { applyStepAdjustment, validateStepAdjustment } from '../utils/scheduleUtils';
 
 type AppStore = AppState & AppActions;
@@ -59,6 +61,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
   printOrderId: null,
   editingRecipeId: null,
   purchaseSuggestions: initialPurchaseSuggestions,
+  deliveryBoard: {
+    showCompletedOrders: false,
+    sortBy: 'deliveryDate',
+    filterRiskLevel: 'all',
+    expandedCustomers: [],
+  },
 
   setCurrentView: (view: ViewType) => set({ currentView: view }),
 
@@ -89,6 +97,130 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setShowScheduleAdjustModal: (show: boolean) => set({ showScheduleAdjustModal: show }),
 
   setScheduleAdjustOrderId: (id: string | null) => set({ scheduleAdjustOrderId: id }),
+
+  setShowCompletedOrders: (show: boolean) =>
+    set((state) => ({
+      deliveryBoard: { ...state.deliveryBoard, showCompletedOrders: show },
+    })),
+
+  setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) =>
+    set((state) => ({
+      deliveryBoard: { ...state.deliveryBoard, sortBy },
+    })),
+
+  setFilterRiskLevel: (level: RiskLevel | 'all') =>
+    set((state) => ({
+      deliveryBoard: { ...state.deliveryBoard, filterRiskLevel: level },
+    })),
+
+  toggleCustomerExpand: (customerName: string) =>
+    set((state) => {
+      const expanded = state.deliveryBoard.expandedCustomers;
+      const isExpanded = expanded.includes(customerName);
+      return {
+        deliveryBoard: {
+          ...state.deliveryBoard,
+          expandedCustomers: isExpanded
+            ? expanded.filter((c) => c !== customerName)
+            : [...expanded, customerName],
+        },
+      };
+    }),
+
+  getCustomerOrderSummaries: (): CustomerOrderSummary[] => {
+    const { orders, getOrderWarnings } = get();
+    const customerMap = new Map<string, Order[]>();
+
+    orders.forEach((order) => {
+      const existing = customerMap.get(order.customerName) || [];
+      customerMap.set(order.customerName, [...existing, order]);
+    });
+
+    const summaries: CustomerOrderSummary[] = [];
+
+    customerMap.forEach((customerOrders, customerName) => {
+      const totalOrders = customerOrders.length;
+      const pendingOrders = customerOrders.filter((o) => o.status === 'pending').length;
+      const inProductionOrders = customerOrders.filter((o) => o.status === 'in_production').length;
+      const completedOrders = customerOrders.filter((o) => o.status === 'completed').length;
+
+      const today = getToday();
+      const overdueOrders = customerOrders.filter(
+        (o) => o.status !== 'completed' && isDateBefore(o.deliveryDate, today)
+      ).length;
+
+      const highPriorityOrders = customerOrders.filter(
+        (o) => o.priority === 'high' && o.status !== 'completed'
+      ).length;
+
+      const activeOrders = customerOrders.filter((o) => o.status !== 'completed');
+      const sortedByDelivery = [...activeOrders].sort((a, b) =>
+        a.deliveryDate.localeCompare(b.deliveryDate)
+      );
+      const earliestDeliveryDate =
+        sortedByDelivery.length > 0 ? sortedByDelivery[0].deliveryDate : '';
+      const latestDeliveryDate =
+        sortedByDelivery.length > 0
+          ? sortedByDelivery[sortedByDelivery.length - 1].deliveryDate
+          : '';
+
+      const totalSteps = customerOrders.reduce(
+        (sum, o) => sum + o.steps.length,
+        0
+      );
+      const completedSteps = customerOrders.reduce(
+        (sum, o) => sum + o.steps.filter((s) => s.status === 'completed').length,
+        0
+      );
+      const overallProgress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+      let riskLevel: RiskLevel = 'low';
+      if (overdueOrders > 0) {
+        riskLevel = 'critical';
+      } else if (highPriorityOrders > 0) {
+        const hasNearDelivery = activeOrders.some((o) => {
+          const days = daysBetween(today, o.deliveryDate);
+          return days <= 7;
+        });
+        if (hasNearDelivery) {
+          riskLevel = 'high';
+        } else {
+          riskLevel = 'medium';
+        }
+      } else {
+        const hasWarnings = activeOrders.some((o) => {
+          const warnings = getOrderWarnings(o.id);
+          return warnings.some((w) => w.level === 'critical' || w.level === 'warning');
+        });
+        if (hasWarnings) {
+          riskLevel = 'medium';
+        }
+      }
+
+      summaries.push({
+        customerName,
+        totalOrders,
+        pendingOrders,
+        inProductionOrders,
+        completedOrders,
+        overdueOrders,
+        highPriorityOrders,
+        earliestDeliveryDate,
+        latestDeliveryDate,
+        overallProgress,
+        riskLevel,
+        orders: customerOrders,
+        orderIds: customerOrders.map((o) => o.id),
+      });
+    });
+
+    return summaries;
+  },
+
+  getCustomerOrderSummary: (customerName: string): CustomerOrderSummary | undefined => {
+    const summaries = get().getCustomerOrderSummaries();
+    return summaries.find((s) => s.customerName === customerName);
+  },
 
   createRecipe: (data: RecipeFormData): Recipe => {
     const recipeId = generateRecipeId();

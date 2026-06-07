@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Calendar, Package, Bell, User } from 'lucide-react';
+import { LayoutDashboard, Calendar, Package, Bell, User, Users } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { ViewType } from '../../types';
 import { formatFullDateChinese, getToday } from '../../utils/dateUtils';
@@ -13,6 +13,7 @@ export const Header: React.FC = () => {
   const views: { type: ViewType; label: string; icon: React.ReactNode }[] = [
     { type: 'kanban', label: '看板视图', icon: <LayoutDashboard size={18} /> },
     { type: 'calendar', label: '日历视图', icon: <Calendar size={18} /> },
+    { type: 'delivery', label: '客户交付', icon: <Users size={18} /> },
   ];
 
   return (

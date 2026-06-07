@@ -203,6 +203,10 @@ body {
   animation: slideUp 0.3s ease-out;
 }
 
+.rotate-270 {
+  transform: rotate(270deg);
+}
+
 @media print {
   body {
     background: white !important;
