@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Plus, BookOpen, Users } from 'lucide-react';
+import { Package, Plus, BookOpen, Users, Layers } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { Header } from '../components/layout/Header';
 import { StatsCards } from '../components/layout/StatsCards';
@@ -12,6 +12,7 @@ import RecipeModal from '../components/modals/RecipeModal';
 import PrintPreviewModal from '../components/modals/PrintPreviewModal';
 import ScheduleAdjustModal from '../components/modals/ScheduleAdjustModal';
 import IngredientGapModal from '../components/modals/IngredientGapModal';
+import SandboxModal from '../components/modals/SandboxModal';
 import { WarningPanel } from '../components/panels/WarningPanel';
 import { IngredientPanel } from '../components/panels/IngredientPanel';
 import { RecipePanel } from '../components/panels/RecipePanel';
@@ -32,17 +33,22 @@ const Home: React.FC = () => {
     showPurchaseSuggestion,
     showScheduleAdjustModal,
     showIngredientGapModal,
+    showSandboxModal,
     setShowWarningPanel,
     setShowIngredientPanel,
     setShowCreateOrderModal,
     setShowRecipePanel,
     setShowSchedulePanel,
     setShowPurchaseSuggestion,
+    setShowSandboxModal,
     ingredients,
     recipes,
     craftsmen,
     purchaseSuggestions,
+    orders,
   } = useAppStore();
+
+  const uncompletedOrdersCount = orders.filter((o) => o.status !== 'completed').length;
 
   const lowStockIngredients = ingredients.filter(
     (ing) => ing.quantity / ing.safetyStock < 0.5
@@ -107,6 +113,16 @@ const Home: React.FC = () => {
                 {craftsmen.length}
               </span>
             </button>
+            <button
+              onClick={() => setShowSandboxModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors shadow-sm"
+            >
+              <Layers size={18} />
+              <span>排程沙盘</span>
+              <span className="bg-amber-500/50 text-white text-xs px-2 py-0.5 rounded-full">
+                {uncompletedOrdersCount} 待排
+              </span>
+            </button>
           </div>
         </div>
 
@@ -152,6 +168,8 @@ const Home: React.FC = () => {
       {showScheduleAdjustModal && <ScheduleAdjustModal />}
 
       {showIngredientGapModal && <IngredientGapModal />}
+
+      {showSandboxModal && <SandboxModal />}
     </div>
   );
 };

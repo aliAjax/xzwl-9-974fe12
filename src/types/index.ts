@@ -174,6 +174,10 @@ export interface AppState {
   deliveryBoard: CustomerDeliveryBoardState;
   showIngredientGapModal: boolean;
   ingredientGapOrderId: string | null;
+  showSandboxModal: boolean;
+  sandboxSelectedOrderIds: string[];
+  sandboxPriorityStrategy: SandboxPriorityStrategy;
+  sandboxResult: SandboxResult | null;
 }
 
 export interface CreateOrderData {
@@ -342,6 +346,13 @@ export interface AppActions {
   getAllCraftsmenWorkload: (options?: WorkloadAnalysisOptions) => CraftsmanWorkload[];
   getSortedCraftsmenForAssignment: (requiredSkill: StepType) => CraftsmanWorkload[];
   resetToDefault: () => void;
+  setShowSandboxModal: (show: boolean) => void;
+  setSandboxSelectedOrderIds: (orderIds: string[]) => void;
+  setSandboxPriorityStrategy: (strategy: SandboxPriorityStrategy) => void;
+  setSandboxResult: (result: SandboxResult | null) => void;
+  generateSandboxPreview: (orderIds: string[], strategy: SandboxPriorityStrategy) => SandboxResult;
+  applySandboxChanges: () => void;
+  clearSandbox: () => void;
 }
 
 export interface AppState {
@@ -373,6 +384,10 @@ export interface AppState {
   deliveryBoard: CustomerDeliveryBoardState;
   showIngredientGapModal: boolean;
   ingredientGapOrderId: string | null;
+  showSandboxModal: boolean;
+  sandboxSelectedOrderIds: string[];
+  sandboxPriorityStrategy: SandboxPriorityStrategy;
+  sandboxResult: SandboxResult | null;
 }
 
 export const STEP_CONFIG: Record<StepType, { name: string; icon: string; color: string }> = {
@@ -483,4 +498,94 @@ export interface CraftsmanWorkload {
 export interface WorkloadAnalysisOptions {
   daysAhead?: number;
   requiredSkill?: StepType;
+}
+
+export type SandboxPriorityStrategy =
+  | 'priority_first'
+  | 'nearest_delivery_first'
+  | 'balanced_load';
+
+export type SandboxConflictType =
+  | 'skill_mismatch'
+  | 'overload'
+  | 'delivery_delay'
+  | 'material_shortage';
+
+export interface SandboxConflict {
+  id: string;
+  type: SandboxConflictType;
+  level: 'info' | 'warning' | 'critical';
+  message: string;
+  detail?: string;
+  orderId?: string;
+  stepId?: string;
+  craftsmanId?: string;
+  ingredientId?: string;
+  suggestion?: string;
+}
+
+export interface SandboxStepPreview {
+  stepId: string;
+  stepType: StepType;
+  stepName: string;
+  originalStartDate: string;
+  originalEndDate: string;
+  originalAssignee: string;
+  originalStatus: StepStatus;
+  newStartDate: string;
+  newEndDate: string;
+  newAssignee: string;
+  isCompleted: boolean;
+  isChanged: boolean;
+  shiftDays: number;
+  conflicts: SandboxConflict[];
+}
+
+export interface SandboxOrderPreview {
+  orderId: string;
+  orderNo: string;
+  customerName: string;
+  priority: Priority;
+  deliveryDate: string;
+  originalCompletionDate: string;
+  newCompletionDate: string;
+  isDeliveryDelayed: boolean;
+  delayDays: number;
+  steps: SandboxStepPreview[];
+  conflicts: SandboxConflict[];
+}
+
+export interface SandboxCraftsmanLoad {
+  craftsmanId: string;
+  craftsmanName: string;
+  originalLoad: number;
+  newLoad: number;
+  loadChange: number;
+  overloadDays: string[];
+  conflicts: SandboxConflict[];
+}
+
+export interface SandboxResult {
+  orders: SandboxOrderPreview[];
+  craftsmenLoad: SandboxCraftsmanLoad[];
+  allConflicts: SandboxConflict[];
+  strategy: SandboxPriorityStrategy;
+  statistics: {
+    totalOrders: number;
+    ordersWithDelays: number;
+    ordersWithConflicts: number;
+    totalConflicts: number;
+    criticalConflicts: number;
+    warningConflicts: number;
+  };
+}
+
+export interface SandboxStepAssignment {
+  orderId: string;
+  stepId: string;
+  stepType: StepType;
+  startDate: string;
+  endDate: string;
+  assignee: string;
+  isCompleted: boolean;
 }

@@ -48,7 +48,13 @@ import {
 import {
   CraftsmanWorkload,
   WorkloadAnalysisOptions,
+  SandboxPriorityStrategy,
+  SandboxResult,
 } from '../types';
+import {
+  generateSandboxSchedule,
+  applySandboxResult,
+} from '../utils/sandboxUtils';
 
 type AppStore = AppState & AppActions;
 
@@ -100,6 +106,10 @@ const getInitialState = (): AppState => {
     deliveryBoard: data.viewPreferences.deliveryBoard,
     showIngredientGapModal: false,
     ingredientGapOrderId: null,
+    showSandboxModal: false,
+    sandboxSelectedOrderIds: [],
+    sandboxPriorityStrategy: 'priority_first',
+    sandboxResult: null,
   };
 };
 
@@ -1006,6 +1016,55 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return sortCraftsmenForAssignment(workloads);
   },
 
+  setShowSandboxModal: (show: boolean) => set({ showSandboxModal: show }),
+
+  setSandboxSelectedOrderIds: (orderIds: string[]) => set({ sandboxSelectedOrderIds: orderIds }),
+
+  setSandboxPriorityStrategy: (strategy: SandboxPriorityStrategy) => set({ sandboxPriorityStrategy: strategy }),
+
+  setSandboxResult: (result: SandboxResult | null) => set({ sandboxResult: result }),
+
+  generateSandboxPreview: (orderIds: string[], strategy: SandboxPriorityStrategy): SandboxResult => {
+    const { orders, craftsmen, recipes, ingredients } = get();
+    const selectedOrders = orders.filter((o) => orderIds.includes(o.id) && o.status !== 'completed');
+    const result = generateSandboxSchedule(
+      selectedOrders,
+      strategy,
+      orders,
+      craftsmen,
+      recipes,
+      ingredients
+    );
+    set({ sandboxResult: result });
+    return result;
+  },
+
+  applySandboxChanges: () => {
+    const { orders, sandboxResult, recalculateWarnings, recalculatePurchaseSuggestions } = get();
+    if (!sandboxResult) return;
+
+    const updatedOrders = applySandboxResult(orders, sandboxResult);
+    set({ orders: updatedOrders });
+
+    recalculateWarnings();
+    recalculatePurchaseSuggestions();
+    saveState(get());
+
+    set({
+      showSandboxModal: false,
+      sandboxSelectedOrderIds: [],
+      sandboxResult: null,
+    });
+  },
+
+  clearSandbox: () => {
+    set({
+      sandboxSelectedOrderIds: [],
+      sandboxResult: null,
+      sandboxPriorityStrategy: 'priority_first',
+    });
+  },
+
   resetToDefault: () => {
     clearStorage();
     const defaultData = getDefaultData();
@@ -1038,6 +1097,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
       editingRecipeId: null,
       showIngredientGapModal: false,
       ingredientGapOrderId: null,
+      showSandboxModal: false,
+      sandboxSelectedOrderIds: [],
+      sandboxPriorityStrategy: 'priority_first',
+      sandboxResult: null,
     });
 
     console.log('[Store] Reset to default data completed');
