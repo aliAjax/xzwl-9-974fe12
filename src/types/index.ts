@@ -165,12 +165,35 @@ export interface StepAdjustPreview {
   shiftDays: number;
 }
 
+export interface WarningDiff {
+  added: Warning[];
+  removed: Warning[];
+  unchanged: Warning[];
+}
+
+export interface DeliveryImpactSummary {
+  newCompletionDate: string;
+  originalCompletionDate: string;
+  deliveryDate: string;
+  daysRelativeToDelivery: number;
+  isAheadOfDelivery: boolean;
+  isOnSchedule: boolean;
+  affectedSteps: {
+    stepId: string;
+    stepName: string;
+    shiftDays: number;
+    isChanged: boolean;
+  }[];
+}
+
 export interface ScheduleAdjustPreview {
   orderId: string;
   steps: StepAdjustPreview[];
   newWarnings: Warning[];
   originalWarnings: Warning[];
   totalDelayDays: number;
+  warningDiff: WarningDiff;
+  deliveryImpact: DeliveryImpactSummary;
 }
 
 export interface StepUpdateData {

@@ -4,6 +4,7 @@ import {
   calculateStepAdjustPreview,
   validateStepAdjustment,
 } from '../utils/scheduleUtils';
+import { calculateDryingWarnings, calculateDeliveryWarnings } from '../utils/warningUtils';
 
 interface UseScheduleAdjustOptions {
   order: Order | undefined;
@@ -41,23 +42,43 @@ export const useScheduleAdjust = ({
       );
     }
 
+    const recipe = recipes.find((r) => r.id === order.recipeId);
+    const originalWarnings = [
+      ...calculateDryingWarnings(order, recipe),
+      ...calculateDeliveryWarnings(order),
+    ];
+
+    const defaultSteps = order.steps.map((step) => ({
+      stepId: step.id,
+      originalStartDate: step.startDate,
+      originalEndDate: step.endDate,
+      originalDurationDays: step.durationDays,
+      newStartDate: step.startDate,
+      newEndDate: step.endDate,
+      newDurationDays: step.durationDays,
+      isChanged: false,
+      isAffected: false,
+      shiftDays: 0,
+    }));
+
+    const lastStep = order.steps[order.steps.length - 1];
+
     return {
       orderId: order.id,
-      steps: order.steps.map((step) => ({
-        stepId: step.id,
-        originalStartDate: step.startDate,
-        originalEndDate: step.endDate,
-        originalDurationDays: step.durationDays,
-        newStartDate: step.startDate,
-        newEndDate: step.endDate,
-        newDurationDays: step.durationDays,
-        isChanged: false,
-        isAffected: false,
-        shiftDays: 0,
-      })),
-      newWarnings: [],
-      originalWarnings: [],
+      steps: defaultSteps,
+      newWarnings: originalWarnings,
+      originalWarnings,
       totalDelayDays: 0,
+      warningDiff: { added: [], removed: [], unchanged: originalWarnings },
+      deliveryImpact: {
+        newCompletionDate: lastStep.endDate,
+        originalCompletionDate: lastStep.endDate,
+        deliveryDate: order.deliveryDate,
+        daysRelativeToDelivery: 0,
+        isAheadOfDelivery: false,
+        isOnSchedule: true,
+        affectedSteps: [],
+      },
     };
   }, [order, pendingUpdates, recipes]);
 

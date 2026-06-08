@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, User, Clock, CheckCircle, Circle, Play, AlertTriangle, ChevronRight, Printer } from 'lucide-react';
+import { X, Calendar, User, Clock, CheckCircle, Circle, Play, AlertTriangle, ChevronRight, Printer, Settings } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { ProgressBar } from '../common/ProgressBar';
 import { Badge } from '../common/Badge';
@@ -17,6 +17,8 @@ const OrderDetailModal: React.FC = () => {
     completeOrder,
     setShowPrintPreview,
     setPrintOrderId,
+    setScheduleAdjustOrderId,
+    setShowScheduleAdjustModal,
   } = useAppStore();
 
   const order = useAppStore((state) => state.orders.find((o) => o.id === selectedOrderId));
@@ -81,6 +83,14 @@ const OrderDetailModal: React.FC = () => {
     setTimeout(() => {
       setShowPrintPreview(true);
     }, 50);
+  };
+
+  const handleAdjustSchedule = () => {
+    if (selectedOrderId) {
+      setScheduleAdjustOrderId(selectedOrderId);
+      setShowScheduleAdjustModal(true);
+      setSelectedOrderId(null);
+    }
   };
 
   return (
@@ -171,7 +181,18 @@ const OrderDetailModal: React.FC = () => {
           </div>
 
           <div className="card p-4">
-            <h3 className="font-semibold text-incense-800 mb-4">生产步骤</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-incense-800">生产步骤</h3>
+              {order.status !== 'completed' && (
+                <button
+                  onClick={handleAdjustSchedule}
+                  className="flex items-center gap-1 text-xs text-sandal-600 hover:text-sandal-700 transition-colors px-2 py-1 rounded hover:bg-sandal-50"
+                >
+                  <Settings size={14} />
+                  调整排期
+                </button>
+              )}
+            </div>
             <div className="space-y-2">
               {order.steps.map((step: ProductionStep, index: number) => (
                 <div

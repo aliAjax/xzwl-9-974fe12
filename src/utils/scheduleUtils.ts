@@ -1,6 +1,71 @@
-import { Order, ProductionStep, StepAdjustPreview, ScheduleAdjustPreview, Warning, Recipe } from '../types';
-import { addDaysToDate, daysBetween, isDateBefore } from './dateUtils';
-import { calculateDryingWarnings, calculateDeliveryWarnings } from './warningUtils';
+import { Order, ProductionStep, StepAdjustPreview, ScheduleAdjustPreview, Warning, Recipe, WarningDiff, DeliveryImpactSummary } from '../types';
+import { addDaysToDate, daysBetween, isDateBefore, isDateSame } from './dateUtils';
+import { calculateDryingWarnings, calculateDeliveryWarnings, getWarningKey } from './warningUtils';
+
+const calculateWarningDiff = (original: Warning[], updated: Warning[]): WarningDiff => {
+  const originalKeys = new Map(original.map((w) => [getWarningKey(w), w]));
+  const updatedKeys = new Map(updated.map((w) => [getWarningKey(w), w]));
+
+  const added: Warning[] = [];
+  const removed: Warning[] = [];
+  const unchanged: Warning[] = [];
+
+  updated.forEach((warning) => {
+    const key = getWarningKey(warning);
+    if (!originalKeys.has(key)) {
+      added.push(warning);
+    } else {
+      unchanged.push(warning);
+    }
+  });
+
+  original.forEach((warning) => {
+    const key = getWarningKey(warning);
+    if (!updatedKeys.has(key)) {
+      removed.push(warning);
+    }
+  });
+
+  return { added, removed, unchanged };
+};
+
+const calculateDeliveryImpact = (
+  order: Order,
+  previews: StepAdjustPreview[]
+): DeliveryImpactSummary => {
+  const originalLastStep = order.steps[order.steps.length - 1];
+  const newLastStep = previews[previews.length - 1];
+
+  const originalCompletionDate = originalLastStep.endDate;
+  const newCompletionDate = newLastStep.newEndDate;
+  const deliveryDate = order.deliveryDate;
+
+  const daysRelativeToDelivery = daysBetween(deliveryDate, newCompletionDate);
+  const isAheadOfDelivery = daysRelativeToDelivery < 0;
+  const isOnSchedule = isDateSame(newCompletionDate, deliveryDate) || daysRelativeToDelivery < 0;
+
+  const affectedSteps = previews
+    .filter((p) => p.isChanged || p.isAffected)
+    .map((p) => {
+      const step = order.steps.find((s) => s.id === p.stepId)!;
+      return {
+        stepId: p.stepId,
+        stepName: step.stepName,
+        shiftDays: p.shiftDays,
+        isChanged: p.isChanged,
+      };
+    });
+
+  return {
+    newCompletionDate,
+    originalCompletionDate,
+    deliveryDate,
+    daysRelativeToDelivery,
+    isAheadOfDelivery,
+    isOnSchedule,
+    affectedSteps,
+  };
+};
 
 export const calculateStepAdjustPreview = (
   order: Order,
@@ -10,23 +75,33 @@ export const calculateStepAdjustPreview = (
 ): ScheduleAdjustPreview => {
   const stepIndex = order.steps.findIndex((s) => s.id === stepId);
   if (stepIndex < 0) {
+    const defaultSteps = order.steps.map((step) => ({
+      stepId: step.id,
+      originalStartDate: step.startDate,
+      originalEndDate: step.endDate,
+      originalDurationDays: step.durationDays,
+      newStartDate: step.startDate,
+      newEndDate: step.endDate,
+      newDurationDays: step.durationDays,
+      isChanged: false,
+      isAffected: false,
+      shiftDays: 0,
+    }));
+
+    const recipe = recipes.find((r) => r.id === order.recipeId);
+    const originalWarnings: Warning[] = [
+      ...calculateDryingWarnings(order, recipe),
+      ...calculateDeliveryWarnings(order),
+    ];
+
     return {
       orderId: order.id,
-      steps: order.steps.map((step) => ({
-        stepId: step.id,
-        originalStartDate: step.startDate,
-        originalEndDate: step.endDate,
-        originalDurationDays: step.durationDays,
-        newStartDate: step.startDate,
-        newEndDate: step.endDate,
-        newDurationDays: step.durationDays,
-        isChanged: false,
-        isAffected: false,
-        shiftDays: 0,
-      })),
-      newWarnings: [],
-      originalWarnings: [],
+      steps: defaultSteps,
+      newWarnings: originalWarnings,
+      originalWarnings,
       totalDelayDays: 0,
+      warningDiff: { added: [], removed: [], unchanged: originalWarnings },
+      deliveryImpact: calculateDeliveryImpact(order, defaultSteps),
     };
   }
 
@@ -116,12 +191,17 @@ export const calculateStepAdjustPreview = (
     ? daysBetween(order.deliveryDate, lastStep.newEndDate)
     : 0;
 
+  const warningDiff = calculateWarningDiff(originalWarnings, newWarnings);
+  const deliveryImpact = calculateDeliveryImpact(order, previews);
+
   return {
     orderId: order.id,
     steps: previews,
     newWarnings,
     originalWarnings,
     totalDelayDays,
+    warningDiff,
+    deliveryImpact,
   };
 };
 

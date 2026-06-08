@@ -11,6 +11,14 @@ import {
   ChevronRight,
   RotateCcw,
   GripVertical,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ArrowRight,
+  Plus,
+  MinusCircle,
+  Info,
+  AlertCircle,
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { useScheduleAdjust } from '../../hooks/useScheduleAdjust';
@@ -339,11 +347,201 @@ const ScheduleAdjustModal: React.FC = () => {
             </div>
           </div>
 
-          {preview && preview.newWarnings.length > 0 && (
+          {hasChanges && preview && preview.deliveryImpact && (
+            <div className="card p-4 border-l-4 border-l-sandal-500 bg-gradient-to-r from-sandal-50/50 to-incense-50">
+              <h3 className="font-semibold text-incense-800 mb-4 flex items-center gap-2">
+                <Info size={18} className="text-sandal-600" />
+                交付影响摘要
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="bg-white p-3 rounded-lg border border-incense-200">
+                  <div className="text-xs text-incense-500 mb-1">预计完工日期</div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-incense-800">
+                      {formatDateChinese(preview.deliveryImpact.newCompletionDate)}
+                    </span>
+                    {preview.deliveryImpact.newCompletionDate !== preview.deliveryImpact.originalCompletionDate && (
+                      <span className="text-xs text-incense-400">
+                        (原: {formatDateChinese(preview.deliveryImpact.originalCompletionDate)})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className={clsx(
+                  'bg-white p-3 rounded-lg border',
+                  preview.deliveryImpact.daysRelativeToDelivery > 0
+                    ? 'border-warning-critical/30 bg-red-50/30'
+                    : preview.deliveryImpact.daysRelativeToDelivery < 0
+                      ? 'border-bamboo-400/30 bg-green-50/30'
+                      : 'border-incense-200'
+                )}>
+                  <div className="text-xs text-incense-500 mb-1">相对交付期</div>
+                  <div className="flex items-center gap-2">
+                    {preview.deliveryImpact.daysRelativeToDelivery > 0 ? (
+                      <>
+                        <TrendingUp size={16} className="text-warning-critical" />
+                        <span className="font-semibold text-warning-critical">
+                          延误 {preview.deliveryImpact.daysRelativeToDelivery} 天
+                        </span>
+                      </>
+                    ) : preview.deliveryImpact.daysRelativeToDelivery < 0 ? (
+                      <>
+                        <TrendingDown size={16} className="text-bamboo-600" />
+                        <span className="font-semibold text-bamboo-600">
+                          提前 {Math.abs(preview.deliveryImpact.daysRelativeToDelivery)} 天
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={16} className="text-bamboo-600" />
+                        <span className="font-semibold text-bamboo-600">准时交付</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-xs text-incense-400 mt-1">
+                    交付期: {formatDateChinese(preview.deliveryImpact.deliveryDate)}
+                  </div>
+                </div>
+
+                <div className="bg-white p-3 rounded-lg border border-incense-200">
+                  <div className="text-xs text-incense-500 mb-1">预警变化</div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {preview.warningDiff.added.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <AlertCircle size={14} className="text-warning-critical" />
+                        <span className="text-sm font-medium text-warning-critical">
+                          +{preview.warningDiff.added.length} 新增
+                        </span>
+                      </div>
+                    )}
+                    {preview.warningDiff.removed.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <CheckCircle size={14} className="text-bamboo-600" />
+                        <span className="text-sm font-medium text-bamboo-600">
+                          -{preview.warningDiff.removed.length} 解除
+                        </span>
+                      </div>
+                    )}
+                    {preview.warningDiff.added.length === 0 && preview.warningDiff.removed.length === 0 && (
+                      <div className="flex items-center gap-1">
+                        <Minus size={14} className="text-incense-400" />
+                        <span className="text-sm text-incense-500">无变化</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {preview.deliveryImpact.affectedSteps.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-xs text-incense-500 mb-2">受影响的工序</div>
+                  <div className="flex flex-wrap gap-2">
+                    {preview.deliveryImpact.affectedSteps.map((affected, idx) => (
+                      <div
+                        key={`${affected.stepId}-${idx}`}
+                        className={clsx(
+                          'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs',
+                          affected.isChanged
+                            ? 'bg-sandal-100 text-sandal-700 border border-sandal-300'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        )}
+                      >
+                        {affected.isChanged ? (
+                          <GripVertical size={12} />
+                        ) : (
+                          <ArrowRight size={12} />
+                        )}
+                        <span>{affected.stepName}</span>
+                        {affected.shiftDays !== 0 && (
+                          <span className={clsx(
+                            'ml-1',
+                            affected.shiftDays > 0 ? 'text-warning-critical' : 'text-bamboo-600'
+                          )}>
+                            {affected.shiftDays > 0 ? '+' : ''}{affected.shiftDays}天
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {preview.warningDiff.added.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-xs text-warning-critical mb-2 flex items-center gap-1">
+                    <Plus size={12} />
+                    新增预警
+                  </div>
+                  <div className="space-y-1">
+                    {preview.warningDiff.added.map((warning: Warning) => (
+                      <div
+                        key={warning.id}
+                        className={clsx(
+                          'p-2 rounded text-xs',
+                          warning.level === 'critical' && 'bg-red-50 text-warning-critical border border-warning-critical/20',
+                          warning.level === 'warning' && 'bg-amber-50 text-sandal-500 border border-sandal-300/20',
+                          warning.level === 'info' && 'bg-blue-50 text-blue-600 border border-blue-200'
+                        )}
+                      >
+                        {warning.message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {preview.warningDiff.removed.length > 0 && (
+                <div>
+                  <div className="text-xs text-bamboo-600 mb-2 flex items-center gap-1">
+                    <MinusCircle size={12} />
+                    解除预警
+                  </div>
+                  <div className="space-y-1">
+                    {preview.warningDiff.removed.map((warning: Warning) => (
+                      <div
+                        key={warning.id}
+                        className="p-2 rounded text-xs bg-green-50 text-bamboo-600 border border-bamboo-300/20 line-through opacity-70"
+                      >
+                        {warning.message}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {preview && preview.warningDiff.unchanged.length > 0 && hasChanges && (
             <div className="card p-4 border-l-4 border-l-warning-critical">
               <h3 className="font-semibold text-warning-critical mb-3 flex items-center gap-2">
                 <AlertTriangle size={18} />
-                调整后预警预览
+                仍存在的预警
+              </h3>
+              <div className="space-y-2">
+                {preview.warningDiff.unchanged.map((warning: Warning) => (
+                  <div
+                    key={warning.id}
+                    className={clsx(
+                      'p-2 rounded text-sm',
+                      warning.level === 'critical' && 'bg-red-50 text-warning-critical',
+                      warning.level === 'warning' && 'bg-amber-50 text-sandal-500',
+                      warning.level === 'info' && 'bg-blue-50 text-warning-info'
+                    )}
+                  >
+                    {warning.message}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!hasChanges && preview && preview.newWarnings.length > 0 && (
+            <div className="card p-4 border-l-4 border-l-warning-critical">
+              <h3 className="font-semibold text-warning-critical mb-3 flex items-center gap-2">
+                <AlertTriangle size={18} />
+                当前预警
               </h3>
               <div className="space-y-2">
                 {preview.newWarnings.map((warning: Warning) => (
