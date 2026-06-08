@@ -356,7 +356,7 @@ const CreateOrderModal: React.FC = () => {
               )}
 
               <div className="space-y-2">
-                {stepSchedules.map((step, index) => (
+                {stepSchedules.map((step) => (
                   <div key={step.stepType} className="flex items-center gap-3">
                     <div
                       className={clsx(

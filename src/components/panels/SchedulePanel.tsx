@@ -201,7 +201,7 @@ export const SchedulePanel: React.FC<SchedulePanelProps> = ({ onClose }) => {
       requiredSkill: assigningStepInfo.step.stepType,
     });
     return sortCraftsmenForAssignment(workloads);
-  }, [assigningStepInfo, craftsmen, orders]);
+  }, [assigningStepInfo, allCraftsmenWorkload, craftsmen, orders]);
 
   const getStepIcon = (status: ProductionStep['status']) => {
     switch (status) {
