@@ -1,27 +1,24 @@
 import { create } from 'zustand';
 import {
-  AppState,
-  AppActions,
-  StepType,
-  StepStatus,
-  ViewType,
+  type AppState,
+  type AppActions,
+  type StepType,
+  type StepStatus,
+  type ViewType,
   STEP_ORDER,
-  CreateOrderData,
-  Order,
-  Recipe,
-  RecipeFormData,
-  ProductionStep,
-  StepUpdateData,
-  CustomerOrderSummary,
-  RiskLevel,
-  CustomerDeliveryBoardState,
-  PurchaseDecision,
-  PurchaseStatus,
-  DeliveryCommitmentSummary,
-  OrderMaterialGap,
-  MaterialGapDetail,
-  Warning,
-  IngredientBatch,
+  type CreateOrderData,
+  type Order,
+  type Recipe,
+  type RecipeFormData,
+  type ProductionStep,
+  type StepUpdateData,
+  type CustomerOrderSummary,
+  type RiskLevel,
+  type CustomerDeliveryBoardState,
+  type PurchaseDecision,
+  type PurchaseStatus,
+  type OrderMaterialGap,
+  type MaterialGapDetail,
 } from '../types';
 import { mockCraftsmen } from '../data/mockCraftsmen';
 import { calculateAllWarnings, mergeWarningsWithResolvedState } from '../utils/warningUtils';
@@ -47,10 +44,10 @@ import {
   sortCraftsmenForAssignment,
 } from '../utils/workloadUtils';
 import {
-  CraftsmanWorkload,
-  WorkloadAnalysisOptions,
-  SandboxPriorityStrategy,
-  SandboxResult,
+  type CraftsmanWorkload,
+  type WorkloadAnalysisOptions,
+  type SandboxPriorityStrategy,
+  type SandboxResult,
 } from '../types';
 import {
   generateSandboxSchedule,
@@ -968,6 +965,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       sandboxResult: null,
     });
 
-    console.log('[Store] Reset to default data completed');
+    console.info('[Store] Reset to default data completed');
   },
 }));

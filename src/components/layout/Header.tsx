@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LayoutDashboard, Calendar, Package, Bell, User, Users, RotateCcw, Database } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { ViewType } from '../../types';
+import { type ViewType } from '../../types';
 import { formatFullDateChinese, getToday } from '../../utils/dateUtils';
 import { getStorageInfo } from '../../utils/storage';
 import { clsx } from 'clsx';

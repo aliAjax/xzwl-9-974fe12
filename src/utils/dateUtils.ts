@@ -15,7 +15,7 @@ import {
 } from 'date-fns';
 import { zhCN } from 'date-fns/locale';
 
-export const formatDate = (date: string | Date, pattern: string = 'yyyy-MM-dd'): string => {
+export const formatDate = (date: string | Date, pattern = 'yyyy-MM-dd'): string => {
   const d = typeof date === 'string' ? parseISO(date) : date;
   return format(d, pattern, { locale: zhCN });
 };

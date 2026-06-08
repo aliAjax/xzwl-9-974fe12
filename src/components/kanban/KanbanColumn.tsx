@@ -1,6 +1,6 @@
 import React from 'react';
 import { Hand, Scroll, Cloud, Archive, Package, ChevronRight } from 'lucide-react';
-import { Order, StepType, STEP_CONFIG, STEP_ORDER } from '../../types';
+import { type Order, type StepType, STEP_CONFIG, STEP_ORDER } from '../../types';
 import { OrderCard } from './OrderCard';
 import { useAppStore } from '../../store/useAppStore';
 import { clsx } from 'clsx';

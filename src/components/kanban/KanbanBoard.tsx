@@ -1,7 +1,7 @@
 import React from 'react';
 import { KanbanColumn } from './KanbanColumn';
 import { useAppStore } from '../../store/useAppStore';
-import { STEP_ORDER, StepType } from '../../types';
+import { STEP_ORDER, type StepType } from '../../types';
 
 export const KanbanBoard: React.FC = () => {
   const { getOrdersByStep } = useAppStore();

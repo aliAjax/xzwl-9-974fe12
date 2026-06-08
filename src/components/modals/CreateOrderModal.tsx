@@ -27,13 +27,13 @@ import {
   isDateBefore,
 } from '../../utils/dateUtils';
 import {
-  Priority,
-  Recipe,
+  type Priority,
+  type Recipe,
   STEP_ORDER,
   STEP_CONFIG,
-  StepType,
-  FeasibilityCheckResult,
-  FeasibilityIssue,
+  type StepType,
+  type FeasibilityCheckResult,
+  type FeasibilityIssue,
 } from '../../types';
 import { checkDeliveryFeasibility, getFeasibilityStatusColor, getFeasibilityStatusLabel } from '../../utils/feasibilityUtils';
 import { clsx } from 'clsx';
@@ -701,7 +701,7 @@ const CreateOrderModal: React.FC = () => {
           <button
             type="submit"
             onClick={handleSubmit}
-            disabled={!customerName || !recipeId || quantity <= 0 || !deliveryDate || (feasibilityCheck && feasibilityCheck.status !== 'feasible' && !riskConfirmed)}
+            disabled={!customerName || !recipeId || quantity <= 0 || !deliveryDate || (feasibilityCheck && feasibilityCheck.status !== 'feasible' && !riskConfirmed) || false}
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={16} className="inline mr-1" />

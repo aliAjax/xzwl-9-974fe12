@@ -4,7 +4,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { ProgressBar } from '../common/ProgressBar';
 import { Badge } from '../common/Badge';
 import { formatDateChinese, getDaysRemaining } from '../../utils/dateUtils';
-import { ProductionStep, StepStatus, STEP_ORDER, STEP_CONFIG } from '../../types';
+import { type ProductionStep, type StepStatus, STEP_ORDER, STEP_CONFIG } from '../../types';
 import { clsx } from 'clsx';
 
 const OrderDetailModal: React.FC = () => {

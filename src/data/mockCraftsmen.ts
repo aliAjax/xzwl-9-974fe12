@@ -1,4 +1,4 @@
-import { Craftsman } from '../types';
+import { type Craftsman } from '../types';
 
 export const mockCraftsmen: Craftsman[] = [
   {

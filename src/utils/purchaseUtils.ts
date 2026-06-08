@@ -1,4 +1,4 @@
-import { Order, Recipe, IngredientBatch, PurchaseSuggestionIngredient, Priority, PurchaseDecision, PurchasePlanItem, SupplierPurchaseGroup } from '../types';
+import { type Order, type Recipe, type IngredientBatch, type PurchaseSuggestionIngredient, type Priority, type PurchaseDecision, type PurchasePlanItem, type SupplierPurchaseGroup } from '../types';
 import { getToday, daysBetween } from './dateUtils';
 
 interface PendingDemand {
@@ -234,10 +234,10 @@ export const groupBySupplier = (
       0
     );
 
-    const highestPriority = items.reduce(
+    const highestPriority = items.reduce<'critical' | 'high' | 'medium' | 'low'>(
       (highest, item) =>
         priorityOrder[item.priority] < priorityOrder[highest] ? item.priority : highest,
-      'low' as const
+      'low'
     );
 
     groups.push({

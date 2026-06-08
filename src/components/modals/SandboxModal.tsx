@@ -16,11 +16,11 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import {
-  Order,
-  SandboxPriorityStrategy,
-  SandboxConflict,
-  SandboxOrderPreview,
-  SandboxStepPreview,
+  type Order,
+  type SandboxPriorityStrategy,
+  type SandboxConflict,
+  type SandboxOrderPreview,
+  type SandboxStepPreview,
   STEP_CONFIG,
 } from '../../types';
 import {

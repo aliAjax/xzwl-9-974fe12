@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { X, Plus, Trash2, BookOpen, Leaf, Archive, FileText } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { RecipeFormData, RecipeIngredient } from '../../types';
+import { type RecipeFormData, type RecipeIngredient } from '../../types';
 
 const commonUnits = ['g', 'ml', 'kg', 'L', '两', '钱'];
 

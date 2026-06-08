@@ -1,4 +1,4 @@
-import { Order, Recipe, IngredientBatch, Warning, ViewType, CustomerDeliveryBoardState, PurchaseDecision } from '../types';
+import { type Order, type Recipe, type IngredientBatch, type Warning, type ViewType, type CustomerDeliveryBoardState, type PurchaseDecision } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
 import { mockIngredients } from '../data/mockIngredients';
@@ -81,7 +81,7 @@ const normalizeViewPreferences = (
 
 const migrations: Record<number, MigrationFn> = {
   0: (data: unknown) => {
-    console.log('[Storage] Running migration v0 -> v1');
+    console.info('[Storage] Running migration v0 -> v1');
     const d = data as StoredAppData;
     return {
       ...d,
@@ -96,7 +96,7 @@ const migrations: Record<number, MigrationFn> = {
     } as PersistentAppData;
   },
   1: (data: unknown) => {
-    console.log('[Storage] Running migration v1 -> v2');
+    console.info('[Storage] Running migration v1 -> v2');
     const d = data as StoredAppData;
     return {
       ...d,
@@ -111,7 +111,7 @@ const migrations: Record<number, MigrationFn> = {
     } as PersistentAppData;
   },
   2: (data: unknown) => {
-    console.log('[Storage] Running migration v2 -> v3');
+    console.info('[Storage] Running migration v2 -> v3');
     const d = data as StoredAppData;
     return {
       ...d,
@@ -126,7 +126,7 @@ const migrations: Record<number, MigrationFn> = {
     } as PersistentAppData;
   },
   3: (data: unknown) => {
-    console.log('[Storage] Running migration v3 -> v4');
+    console.info('[Storage] Running migration v3 -> v4');
     const d = data as StoredAppData;
     return {
       ...d,
@@ -162,7 +162,7 @@ export const saveToStorage = (data: Omit<PersistentAppData, 'version' | 'savedAt
       savedAt: new Date().toISOString(),
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(persistentData));
-    console.log('[Storage] Data saved successfully');
+    console.info('[Storage] Data saved successfully');
   } catch (error) {
     console.error('[Storage] Failed to save data:', error);
   }
@@ -172,14 +172,14 @@ export const loadFromStorage = (): DefaultDataResult | null => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      console.log('[Storage] No saved data found, using defaults');
+      console.info('[Storage] No saved data found, using defaults');
       return null;
     }
 
     let data: PersistentAppData = JSON.parse(raw);
 
     if (!data.version || data.version < CURRENT_VERSION) {
-      console.log(`[Storage] Migrating data from v${data.version || 0} to v${CURRENT_VERSION}`);
+      console.info(`[Storage] Migrating data from v${data.version || 0} to v${CURRENT_VERSION}`);
       data = runMigrations(data);
     }
 
@@ -188,14 +188,14 @@ export const loadFromStorage = (): DefaultDataResult | null => {
       return null;
     }
 
-    console.log('[Storage] Data loaded successfully, version:', data.version);
+    console.info('[Storage] Data loaded successfully, version:', data.version);
 
     const existingResolved = (data.warnings || []).filter((w: Warning) => w.isResolved);
     const recalculatedWarnings = calculateAllWarnings(data.orders, data.ingredients, data.recipes);
     const mergedWarnings = mergeWarningsWithResolvedState(recalculatedWarnings, existingResolved);
 
-    console.log(`[Storage] Recalculated warnings: ${recalculatedWarnings.length} total, ${existingResolved.length} resolved states preserved`);
-    console.log(`[Storage] Loaded ${data.purchaseDecisions?.length || 0} purchase decisions`);
+    console.info(`[Storage] Recalculated warnings: ${recalculatedWarnings.length} total, ${existingResolved.length} resolved states preserved`);
+    console.info(`[Storage] Loaded ${data.purchaseDecisions?.length || 0} purchase decisions`);
 
     return {
       orders: data.orders,
@@ -233,7 +233,7 @@ const runMigrations = (data: PersistentAppData): PersistentAppData => {
 export const clearStorage = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEY);
-    console.log('[Storage] Data cleared successfully');
+    console.info('[Storage] Data cleared successfully');
   } catch (error) {
     console.error('[Storage] Failed to clear data:', error);
   }

@@ -195,8 +195,7 @@ describe('warningUtils', () => {
         deliveryDate: addDaysToDate(TEST_TODAY, 10),
       });
 
-      const lastStep = order.steps[order.steps.length - 1];
-      const delayedSteps = order.steps.map((step, index) => ({
+      const delayedSteps = order.steps.map((step, _index) => ({
         ...step,
         startDate: addDaysToDate(step.startDate, 15),
         endDate: addDaysToDate(step.endDate, 15),

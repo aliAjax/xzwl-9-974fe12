@@ -1,13 +1,13 @@
 import {
-  Order,
-  Recipe,
-  IngredientBatch,
-  Craftsman,
-  CreateOrderData,
-  FeasibilityCheckResult,
-  FeasibilityIssue,
-  FeasibilityStatus,
-  StepType,
+  type Order,
+  type Recipe,
+  type IngredientBatch,
+  type Craftsman,
+  type CreateOrderData,
+  type FeasibilityCheckResult,
+  type FeasibilityIssue,
+  type FeasibilityStatus,
+  type StepType,
   STEP_ORDER,
   STEP_CONFIG,
 } from '../types';
@@ -102,7 +102,7 @@ const calculateIngredientAvailability = (
 };
 
 const calculateWorkload = (
-  recipe: Recipe,
+  _recipe: Recipe,
   craftsmen: Craftsman[],
   existingOrders: Order[],
   deliveryDate: string

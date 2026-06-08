@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 import { calculateDeliveryCommitment } from './deliveryUtils';
 import {
-  createMockOrder,
   createMockRecipe,
   createMockIngredientBatch,
   createCompletedOrder,
@@ -23,10 +22,12 @@ vi.mock('./dateUtils', async () => {
 const createTestOrder = (
   overrides: Partial<Order> & { id: string; recipeId: string }
 ): Order => {
+  const { id, recipeId, ...restOverrides } = overrides;
+
   const stepTypes: StepType[] = ['kneading', 'shaping', 'drying', 'cellaring', 'packaging'];
   const steps = stepTypes.map((type, index) => ({
-    id: `${overrides.id}-step-${index}`,
-    orderId: overrides.id,
+    id: `${id}-step-${index}`,
+    orderId: id,
     stepType: type,
     stepName: type,
     status: 'not_started' as const,
@@ -38,10 +39,10 @@ const createTestOrder = (
   }));
 
   return {
-    id: overrides.id,
-    orderNo: overrides.id.toUpperCase(),
+    id,
+    orderNo: id.toUpperCase(),
     customerName: '测试客户',
-    recipeId: overrides.recipeId,
+    recipeId,
     quantity: 100,
     unit: '克',
     orderDate: TEST_TODAY,
@@ -50,7 +51,7 @@ const createTestOrder = (
     priority: 'medium',
     currentStepIndex: 0,
     steps,
-    ...overrides,
+    ...restOverrides,
   };
 };
 

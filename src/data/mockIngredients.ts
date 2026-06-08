@@ -1,4 +1,4 @@
-import { IngredientBatch } from '../types';
+import { type IngredientBatch } from '../types';
 
 export const mockIngredients: IngredientBatch[] = [
   {

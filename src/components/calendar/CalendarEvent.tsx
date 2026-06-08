@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Settings } from 'lucide-react';
-import { Order, STEP_CONFIG } from '../../types';
+import { type Order, STEP_CONFIG } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { clsx } from 'clsx';
 

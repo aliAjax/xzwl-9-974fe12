@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, AlertTriangle, Cloud, Package, Clock, CheckCircle } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { Warning, WarningType } from '../../types';
+import { type Warning, type WarningType } from '../../types';
 import { getUnresolvedWarnings, getWarningsByType } from '../../utils/warningUtils';
 import { formatDateChinese } from '../../utils/dateUtils';
 import { clsx } from 'clsx';

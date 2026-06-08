@@ -1,4 +1,4 @@
-import { Order, ProductionStep, StepType } from '../types';
+import { type Order, type ProductionStep, type StepType } from '../types';
 import { mockRecipes } from './mockRecipes';
 import { addDays, formatISO } from 'date-fns';
 

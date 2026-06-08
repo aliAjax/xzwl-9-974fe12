@@ -24,7 +24,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { useScheduleAdjust } from '../../hooks/useScheduleAdjust';
 import { formatDateChinese, getDaysRemaining } from '../../utils/dateUtils';
 import { getStepAdjustTooltip } from '../../utils/scheduleUtils';
-import { ProductionStep, StepStatus, STEP_CONFIG, StepUpdateData, Warning } from '../../types';
+import { type ProductionStep, type StepStatus, STEP_CONFIG, type StepUpdateData, type Warning } from '../../types';
 import { clsx } from 'clsx';
 
 const ScheduleAdjustModal: React.FC = () => {

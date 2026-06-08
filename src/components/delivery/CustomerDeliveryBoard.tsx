@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAppStore } from '../../store/useAppStore';
-import { RiskLevel } from '../../types';
+import { type RiskLevel } from '../../types';
 import { CustomerCard } from './CustomerCard';
 
 const sortOptions = [

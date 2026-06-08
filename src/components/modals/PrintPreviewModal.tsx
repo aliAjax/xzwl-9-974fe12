@@ -2,7 +2,7 @@ import React from 'react';
 import { X, Printer, Calendar, User, AlertTriangle, CheckCircle, Circle, Play } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { formatDateChinese, getDaysRemaining } from '../../utils/dateUtils';
-import { ProductionStep, StepStatus, STEP_CONFIG } from '../../types';
+import { type ProductionStep, type StepStatus, STEP_CONFIG } from '../../types';
 import { clsx } from 'clsx';
 
 const PrintPreviewModal: React.FC = () => {

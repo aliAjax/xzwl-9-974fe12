@@ -1,17 +1,17 @@
 import {
-  Order,
-  Craftsman,
-  Recipe,
-  IngredientBatch,
-  StepType,
-  SandboxPriorityStrategy,
-  SandboxResult,
-  SandboxOrderPreview,
-  SandboxStepPreview,
-  SandboxConflict,
-  SandboxCraftsmanLoad,
-  SandboxStepAssignment,
-  ProductionStep,
+  type Order,
+  type Craftsman,
+  type Recipe,
+  type IngredientBatch,
+  type StepType,
+  type SandboxPriorityStrategy,
+  type SandboxResult,
+  type SandboxOrderPreview,
+  type SandboxStepPreview,
+  type SandboxConflict,
+  type SandboxCraftsmanLoad,
+  type SandboxStepAssignment,
+  type ProductionStep,
 } from '../types';
 import {
   getToday,
@@ -178,7 +178,7 @@ export const detectSkillMismatch = (
 export const detectOverload = (
   assignments: SandboxStepAssignment[],
   craftsmen: Craftsman[],
-  daysAhead: number = 60
+  daysAhead = 60
 ): SandboxConflict[] => {
   const conflicts: SandboxConflict[] = [];
   const today = getToday();

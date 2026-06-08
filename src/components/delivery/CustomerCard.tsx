@@ -17,7 +17,7 @@ import {
   Star,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { CustomerOrderSummary, Order } from '../../types';
+import { type CustomerOrderSummary, type Order } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { formatDateChinese, getDaysRemaining } from '../../utils/dateUtils';
 import { Badge } from '../common/Badge';

@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, BookOpen, Plus, Edit2, Trash2, Clock, Leaf, Archive, Copy } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { Recipe } from '../../types';
+import { type Recipe } from '../../types';
 
 interface RecipePanelProps {
   onClose: () => void;

@@ -1,15 +1,15 @@
 import {
-  Order,
-  Warning,
-  IngredientBatch,
-  Recipe,
-  DeliveryCommitmentSummary,
+  type Order,
+  type Warning,
+  type IngredientBatch,
+  type Recipe,
+  type DeliveryCommitmentSummary,
 } from '../types';
 import { daysBetween, isDateBefore } from './dateUtils';
 
 export const calculateDeliveryCommitment = (
   customerOrders: Order[],
-  warnings: Warning[],
+  _warnings: Warning[],
   ingredients: IngredientBatch[],
   recipes: Recipe[],
   today: string

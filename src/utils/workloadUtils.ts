@@ -1,10 +1,10 @@
 import {
-  Craftsman,
-  Order,
-  ProductionStep,
-  StepType,
-  CraftsmanWorkload,
-  WorkloadAnalysisOptions,
+  type Craftsman,
+  type Order,
+  type ProductionStep,
+  type StepType,
+  type CraftsmanWorkload,
+  type WorkloadAnalysisOptions,
 } from '../types';
 import { getToday, isDateAfter, isDateBefore, addDaysToDate } from './dateUtils';
 

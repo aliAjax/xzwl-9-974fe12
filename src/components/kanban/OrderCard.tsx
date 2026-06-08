@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar, User, AlertTriangle, Clock } from 'lucide-react';
-import { Order } from '../../types';
+import { type Order } from '../../types';
 import { useAppStore } from '../../store/useAppStore';
 import { formatDateChinese, getDaysRemaining } from '../../utils/dateUtils';
 import { Badge } from '../common/Badge';

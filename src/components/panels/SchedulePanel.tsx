@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Users, User, Clock, CheckCircle, Play, Circle, ChevronDown, ChevronUp, Hand, Scroll, Cloud, Archive, Package, AlertTriangle, Coffee } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { STEP_CONFIG, STEP_ORDER, StepType, Order, ProductionStep, Craftsman, CraftsmanWorkload } from '../../types';
+import { STEP_CONFIG, STEP_ORDER, type StepType, type Order, type ProductionStep, type Craftsman, type CraftsmanWorkload } from '../../types';
 import { formatDateChinese } from '../../utils/dateUtils';
 import {
   analyzeAllCraftsmenWorkload,

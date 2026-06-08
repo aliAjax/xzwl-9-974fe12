@@ -1,4 +1,4 @@
-import { Order, ProductionStep, Recipe, IngredientBatch, Warning, StepType } from '../types';
+import { type Order, type ProductionStep, type Recipe, type IngredientBatch, type Warning, type StepType } from '../types';
 import { addDaysToDate } from '../utils/dateUtils';
 
 export const TEST_TODAY = '2026-06-07';
@@ -34,22 +34,25 @@ export const createMockStep = (
     cellaring: 30,
     packaging: 2,
   };
+
+  const { orderId, stepType, index, ...restOverrides } = overrides;
+
   const baseDate = TEST_TODAY;
-  const startDate = addDaysToDate(baseDate, overrides.index * 5);
-  const duration = overrides.durationDays ?? stepDurations[overrides.stepType];
+  const startDate = addDaysToDate(baseDate, index * 5);
+  const duration = restOverrides.durationDays ?? stepDurations[stepType];
 
   return {
-    id: `${overrides.orderId}-step-${overrides.index}`,
-    orderId: overrides.orderId,
-    stepType: overrides.stepType,
-    stepName: stepNames[overrides.stepType],
+    id: `${orderId}-step-${index}`,
+    orderId,
+    stepType,
+    stepName: stepNames[stepType],
     status: 'not_started',
     startDate,
     endDate: addDaysToDate(startDate, duration),
     durationDays: duration,
     notes: '',
     assignee: '',
-    ...overrides,
+    ...restOverrides,
   };
 };
 
@@ -142,7 +145,6 @@ export const createOrderWithDryingDelay = (): { order: Order; recipe: Recipe } =
     });
   });
 
-  const lastStep = steps[steps.length - 1];
   const deliveryDate = addDaysToDate(TEST_TODAY, 60);
 
   const order = createMockOrder({

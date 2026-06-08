@@ -17,7 +17,6 @@ import {
 } from '../test/testHelpers';
 import { addDaysToDate } from './dateUtils';
 import * as dateUtils from './dateUtils';
-import type { Recipe } from '../types';
 
 vi.mock('./dateUtils', async () => {
   const actual = await vi.importActual('./dateUtils');
