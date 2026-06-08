@@ -5,7 +5,7 @@ import { mockIngredients } from '../data/mockIngredients';
 import { calculateAllWarnings, mergeWarningsWithResolvedState } from './warningUtils';
 
 const STORAGE_KEY = 'xzwl-app-state';
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 
 export interface PersistentViewPreferences {
   currentView: ViewType;
@@ -64,6 +64,7 @@ const defaultViewPreferences: PersistentViewPreferences = {
     sortBy: 'deliveryDate',
     filterRiskLevel: 'all',
     expandedCustomers: [],
+    showThisWeekOnly: false,
   },
 };
 
@@ -115,6 +116,21 @@ const migrations: Record<number, MigrationFn> = {
     return {
       ...d,
       version: 3,
+      viewPreferences: normalizeViewPreferences(d.viewPreferences),
+      orders: d.orders || [],
+      recipes: d.recipes || [],
+      ingredients: d.ingredients || [],
+      warnings: d.warnings || [],
+      purchaseDecisions: d.purchaseDecisions || [],
+      savedAt: d.savedAt || new Date().toISOString(),
+    } as PersistentAppData;
+  },
+  3: (data: unknown) => {
+    console.log('[Storage] Running migration v3 -> v4');
+    const d = data as StoredAppData;
+    return {
+      ...d,
+      version: 4,
       viewPreferences: normalizeViewPreferences(d.viewPreferences),
       orders: d.orders || [],
       recipes: d.recipes || [],

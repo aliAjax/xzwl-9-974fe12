@@ -8,6 +8,13 @@ import {
   CheckCircle,
   XCircle,
   User,
+  Settings,
+  AlertTriangle,
+  FileText,
+  TrendingDown,
+  AlertCircle,
+  Loader2,
+  Star,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { CustomerOrderSummary, Order } from '../../types';
@@ -67,8 +74,17 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
   onToggle,
   searchTerm = '',
 }) => {
-  const { setSelectedOrderId, getRecipeById, deliveryBoard } = useAppStore();
+  const {
+    setSelectedOrderId,
+    getRecipeById,
+    deliveryBoard,
+    setScheduleAdjustOrderId,
+    setShowScheduleAdjustModal,
+    setIngredientGapOrderId,
+    setShowIngredientGapModal,
+  } = useAppStore();
   const riskConfig = riskLevelConfig[summary.riskLevel];
+  const commitment = summary.deliveryCommitment;
 
   const { showCompletedOrders } = deliveryBoard;
 
@@ -118,6 +134,23 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
     if (daysRemaining < 0) return 'critical';
     if (daysRemaining <= 7) return 'warning';
     return 'default';
+  };
+
+  const handleAdjustSchedule = (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setScheduleAdjustOrderId(orderId);
+    setShowScheduleAdjustModal(true);
+  };
+
+  const handleViewMaterialGap = (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIngredientGapOrderId(orderId);
+    setShowIngredientGapModal(true);
+  };
+
+  const handleViewOrderDetail = (orderId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedOrderId(orderId);
   };
 
   return (
@@ -220,6 +253,126 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
                     : 'success'
             }
           />
+        </div>
+
+        <div className="mb-4 p-4 bg-gradient-to-r from-incense-50 to-amber-50 rounded-xl border border-incense-100">
+          <h4 className="text-sm font-semibold text-incense-800 mb-3 flex items-center gap-2">
+            <Star size={16} className="text-amber-500" />
+            承诺交付摘要
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="bg-white rounded-lg p-3 border border-incense-100">
+              <div className="flex items-center gap-1 text-xs text-incense-500 mb-1">
+                <Calendar size={12} />
+                <span>最早交付</span>
+              </div>
+              <p
+                className={clsx(
+                  'text-sm font-semibold',
+                  commitment.earliestDaysRemaining < 0
+                    ? 'text-red-600'
+                    : commitment.earliestDaysRemaining <= 7
+                      ? 'text-amber-600'
+                      : 'text-incense-700'
+                )}
+              >
+                {commitment.earliestDeliveryDate
+                  ? formatDateChinese(commitment.earliestDeliveryDate)
+                  : '-'}
+                {commitment.earliestDaysRemaining < 0 && (
+                  <span className="ml-1 text-xs">
+                    (逾期{Math.abs(commitment.earliestDaysRemaining)}天)
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg p-3 border border-incense-100">
+              <div className="flex items-center gap-1 text-xs text-incense-500 mb-1">
+                <AlertTriangle size={12} />
+                <span>逾期风险</span>
+              </div>
+              <p
+                className={clsx(
+                  'text-sm font-semibold',
+                  commitment.hasOverdueRisk ? 'text-red-600' : 'text-bamboo-600'
+                )}
+              >
+                {commitment.hasOverdueRisk
+                  ? `${commitment.overdueRiskCount}单逾期`
+                  : '无逾期'}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg p-3 border border-incense-100">
+              <div className="flex items-center gap-1 text-xs text-incense-500 mb-1">
+                <Loader2 size={12} />
+                <span>阻塞工序</span>
+              </div>
+              <p className="text-sm font-semibold text-incense-700">
+                {commitment.criticalBlockingSteps.length > 0
+                  ? commitment.criticalBlockingSteps
+                      .map((s) => `${s.stepName}(${s.orderCount}单)`)
+                      .join('、')
+                  : '无阻塞'}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg p-3 border border-incense-100">
+              <div className="flex items-center gap-1 text-xs text-incense-500 mb-1">
+                <TrendingDown size={12} />
+                <span>缺料风险</span>
+              </div>
+              <p
+                className={clsx(
+                  'text-sm font-semibold',
+                  commitment.materialShortageRisk ? 'text-orange-600' : 'text-bamboo-600'
+                )}
+              >
+                {commitment.materialShortageRisk
+                  ? `${commitment.materialShortageCount}种原料`
+                  : '原料充足'}
+              </p>
+              {commitment.materialShortageDetails.length > 0 && (
+                <p className="text-xs text-incense-500 mt-1 line-clamp-1">
+                  {commitment.materialShortageDetails
+                    .map((d) => d.ingredientName)
+                    .join('、')}
+                </p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-lg p-3 border border-incense-100">
+              <div className="flex items-center gap-1 text-xs text-incense-500 mb-1">
+                <AlertCircle size={12} />
+                <span>高优先级</span>
+              </div>
+              <p
+                className={clsx(
+                  'text-sm font-semibold',
+                  commitment.highPriorityOrderCount > 0 ? 'text-orange-600' : 'text-incense-600'
+                )}
+              >
+                {commitment.highPriorityOrderCount > 0
+                  ? `${commitment.highPriorityOrderCount}单`
+                  : '无高优'}
+              </p>
+              {commitment.highPriorityOrderNos.length > 0 && (
+                <p className="text-xs text-incense-500 mt-1 line-clamp-1">
+                  {commitment.highPriorityOrderNos.join('、')}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {commitment.needsThisWeek && (
+            <div className="mt-3 flex items-center gap-2 px-3 py-2 bg-amber-100 rounded-lg border border-amber-200">
+              <AlertCircle size={14} className="text-amber-600 flex-shrink-0" />
+              <span className="text-xs text-amber-700 font-medium">
+                本周有订单需要处理，请优先安排
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between text-sm">
@@ -369,8 +522,35 @@ export const CustomerCard: React.FC<CustomerCardProps> = ({
                         </div>
                       </div>
 
-                      <div className="ml-4 text-incense-400">
-                        <ChevronDown size={16} className="rotate-270" />
+                      <div className="flex flex-col items-end gap-2">
+                        <div className="flex items-center gap-1">
+                          {order.status !== 'completed' && (
+                            <>
+                              <button
+                                onClick={(e) => handleAdjustSchedule(order.id, e)}
+                                className="p-1.5 rounded-lg hover:bg-sandal-100 text-incense-500 hover:text-sandal-600 transition-colors"
+                                title="调整排期"
+                              >
+                                <Settings size={14} />
+                              </button>
+                              <button
+                                onClick={(e) => handleViewMaterialGap(order.id, e)}
+                                className="p-1.5 rounded-lg hover:bg-orange-100 text-incense-500 hover:text-orange-600 transition-colors"
+                                title="查看原料缺口"
+                              >
+                                <TrendingDown size={14} />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={(e) => handleViewOrderDetail(order.id, e)}
+                            className="p-1.5 rounded-lg hover:bg-incense-100 text-incense-500 hover:text-incense-700 transition-colors"
+                            title="订单详情"
+                          >
+                            <FileText size={14} />
+                          </button>
+                        </div>
+                        <ChevronDown size={16} className="text-incense-400 rotate-270" />
                       </div>
                     </div>
                   </div>

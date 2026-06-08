@@ -11,6 +11,7 @@ import CreateOrderModal from '../components/modals/CreateOrderModal';
 import RecipeModal from '../components/modals/RecipeModal';
 import PrintPreviewModal from '../components/modals/PrintPreviewModal';
 import ScheduleAdjustModal from '../components/modals/ScheduleAdjustModal';
+import IngredientGapModal from '../components/modals/IngredientGapModal';
 import { WarningPanel } from '../components/panels/WarningPanel';
 import { IngredientPanel } from '../components/panels/IngredientPanel';
 import { RecipePanel } from '../components/panels/RecipePanel';
@@ -30,6 +31,7 @@ const Home: React.FC = () => {
     showPrintPreview,
     showPurchaseSuggestion,
     showScheduleAdjustModal,
+    showIngredientGapModal,
     setShowWarningPanel,
     setShowIngredientPanel,
     setShowCreateOrderModal,
@@ -148,6 +150,8 @@ const Home: React.FC = () => {
       )}
 
       {showScheduleAdjustModal && <ScheduleAdjustModal />}
+
+      {showIngredientGapModal && <IngredientGapModal />}
     </div>
   );
 };

@@ -17,6 +17,11 @@ import {
   CustomerDeliveryBoardState,
   PurchaseDecision,
   PurchaseStatus,
+  DeliveryCommitmentSummary,
+  OrderMaterialGap,
+  MaterialGapDetail,
+  Warning,
+  IngredientBatch,
 } from '../types';
 import { mockCraftsmen } from '../data/mockCraftsmen';
 import { calculateAllWarnings, mergeWarningsWithResolvedState } from '../utils/warningUtils';
@@ -93,10 +98,148 @@ const getInitialState = (): AppState => {
     purchasePlanItems,
     supplierPurchaseGroups,
     deliveryBoard: data.viewPreferences.deliveryBoard,
+    showIngredientGapModal: false,
+    ingredientGapOrderId: null,
   };
 };
 
 const initialState = getInitialState();
+
+const calculateDeliveryCommitment = (
+  customerOrders: Order[],
+  warnings: Warning[],
+  ingredients: IngredientBatch[],
+  recipes: Recipe[],
+  today: string
+): DeliveryCommitmentSummary => {
+  const activeOrders = customerOrders.filter((o) => o.status !== 'completed');
+
+  const sortedByDelivery = [...activeOrders].sort((a, b) =>
+    a.deliveryDate.localeCompare(b.deliveryDate)
+  );
+  const earliestDeliveryDate =
+    sortedByDelivery.length > 0 ? sortedByDelivery[0].deliveryDate : '';
+  const earliestDaysRemaining = earliestDeliveryDate
+    ? daysBetween(today, earliestDeliveryDate)
+    : 0;
+
+  const overdueOrders = activeOrders.filter((o) => isDateBefore(o.deliveryDate, today));
+  const hasOverdueRisk = overdueOrders.length > 0;
+  const overdueRiskCount = overdueOrders.length;
+
+  const blockingStepMap = new Map<string, { orderCount: number; orderNos: string[] }>();
+  activeOrders.forEach((order) => {
+    const currentStep = order.steps.find((s) => s.status === 'in_progress');
+    if (!currentStep) {
+      const firstStep = order.steps[0];
+      if (firstStep) {
+        const existing = blockingStepMap.get(firstStep.stepName) || {
+          orderCount: 0,
+          orderNos: [],
+        };
+        blockingStepMap.set(firstStep.stepName, {
+          orderCount: existing.orderCount + 1,
+          orderNos: [...existing.orderNos, order.orderNo],
+        });
+      }
+    }
+  });
+  const criticalBlockingSteps = Array.from(blockingStepMap.entries())
+    .map(([stepName, data]) => ({ stepName, ...data }))
+    .sort((a, b) => b.orderCount - a.orderCount)
+    .slice(0, 3);
+
+  const ingredientIdToName = new Map<string, string>();
+  ingredients.forEach((ing) => {
+    ingredientIdToName.set(ing.id, ing.name);
+  });
+
+  const ingredientMap = new Map<string, typeof ingredients[0][]>();
+  ingredients.forEach((ing) => {
+    const existing = ingredientMap.get(ing.name) || [];
+    ingredientMap.set(ing.name, [...existing, ing]);
+  });
+
+  const ingredientStockMap = new Map<string, number>();
+  ingredientMap.forEach((batches, name) => {
+    const totalStock = batches.reduce((sum, batch) => {
+      const daysToExpiry = daysBetween(today, batch.expiryDate);
+      if (daysToExpiry <= 0) return sum;
+      if (daysToExpiry <= 7) return sum + batch.quantity * 0.3;
+      if (daysToExpiry <= 30) return sum + batch.quantity * 0.7;
+      return sum + batch.quantity;
+    }, 0);
+    ingredientStockMap.set(name, totalStock);
+  });
+
+  const materialShortageDetails: {
+    ingredientName: string;
+    gap: number;
+    unit: string;
+    orderNos: string[];
+  }[] = [];
+
+  customerOrders.forEach((order) => {
+    if (order.status === 'completed') return;
+    const recipe = recipes.find((r) => r.id === order.recipeId);
+    if (!recipe) return;
+
+    recipe.ingredients.forEach((ri) => {
+      const ingredientName = ingredientIdToName.get(ri.ingredientId);
+      if (!ingredientName) return;
+
+      const required = (ri.quantity / 100) * order.quantity;
+      const available = ingredientStockMap.get(ingredientName) || 0;
+      const gap = required - available;
+
+      if (gap > 0) {
+        const existing = materialShortageDetails.find(
+          (d) => d.ingredientName === ingredientName
+        );
+        if (existing) {
+          existing.gap += gap;
+          if (!existing.orderNos.includes(order.orderNo)) {
+            existing.orderNos.push(order.orderNo);
+          }
+        } else {
+          const batches = ingredientMap.get(ingredientName) || [];
+          materialShortageDetails.push({
+            ingredientName,
+            gap: Number(gap.toFixed(2)),
+            unit: batches[0]?.unit || 'g',
+            orderNos: [order.orderNo],
+          });
+        }
+      }
+    });
+  });
+
+  const materialShortageRisk = materialShortageDetails.length > 0;
+  const materialShortageCount = materialShortageDetails.length;
+
+  const highPriorityOrders = activeOrders.filter((o) => o.priority === 'high');
+  const highPriorityOrderCount = highPriorityOrders.length;
+  const highPriorityOrderNos = highPriorityOrders.map((o) => o.orderNo);
+
+  const needsThisWeek = activeOrders.some((o) => {
+    const days = daysBetween(today, o.deliveryDate);
+    return days <= 7 && days >= 0;
+  });
+
+  return {
+    earliestDeliveryDate,
+    earliestDaysRemaining,
+    hasOverdueRisk,
+    overdueRiskCount,
+    criticalBlockingSteps,
+    materialShortageRisk,
+    materialShortageCount,
+    materialShortageDetails,
+    highPriorityOrderCount,
+    highPriorityOrderNos,
+    needsThisWeek,
+  };
+};
 
 const saveState = (state: AppState) => {
   saveToStorage({
@@ -221,8 +364,98 @@ export const useAppStore = create<AppStore>((set, get) => ({
     saveState(get());
   },
 
+  setShowThisWeekOnly: (show: boolean) => {
+    set((state) => ({
+      deliveryBoard: { ...state.deliveryBoard, showThisWeekOnly: show },
+    }));
+    saveState(get());
+  },
+
+  setShowIngredientGapModal: (show: boolean) => set({ showIngredientGapModal: show }),
+
+  setIngredientGapOrderId: (id: string | null) => set({ ingredientGapOrderId: id }),
+
+  getOrderMaterialGap: (orderId: string): OrderMaterialGap | null => {
+    const { orders, recipes, ingredients } = get();
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return null;
+
+    const recipe = recipes.find((r) => r.id === order.recipeId);
+    if (!recipe) return null;
+
+    const today = getToday();
+
+    const ingredientIdToName = new Map<string, string>();
+    ingredients.forEach((ing) => {
+      ingredientIdToName.set(ing.id, ing.name);
+    });
+
+    const ingredientMap = new Map<string, typeof ingredients[0][]>();
+    ingredients.forEach((ing) => {
+      const existing = ingredientMap.get(ing.name) || [];
+      ingredientMap.set(ing.name, [...existing, ing]);
+    });
+
+    const gaps: MaterialGapDetail[] = [];
+
+    recipe.ingredients.forEach((ri) => {
+      const ingredientName = ingredientIdToName.get(ri.ingredientId);
+      if (!ingredientName) return;
+
+      const required = (ri.quantity / 100) * order.quantity;
+      const batches = ingredientMap.get(ingredientName) || [];
+
+      const available = batches.reduce((sum, batch) => {
+        const daysToExpiry = daysBetween(today, batch.expiryDate);
+        if (daysToExpiry <= 0) return sum;
+        if (daysToExpiry <= 7) return sum + batch.quantity * 0.3;
+        if (daysToExpiry <= 30) return sum + batch.quantity * 0.7;
+        return sum + batch.quantity;
+      }, 0);
+
+      const gap = required - available;
+      if (gap > 0) {
+        const relatedOrders = orders
+          .filter((o) => o.status !== 'completed' && o.id !== orderId)
+          .map((o) => {
+            const r = recipes.find((rec) => rec.id === o.recipeId);
+            if (!r) return null;
+            const ing = r.ingredients.find((i) => i.ingredientId === ri.ingredientId);
+            if (!ing) return null;
+            const reqQty = (ing.quantity / 100) * o.quantity;
+            return {
+              orderId: o.id,
+              orderNo: o.orderNo,
+              requiredQuantity: Number(reqQty.toFixed(2)),
+              deliveryDate: o.deliveryDate,
+              priority: o.priority,
+            };
+          })
+          .filter(Boolean) as MaterialGapDetail['relatedOrders'];
+
+        gaps.push({
+          ingredientId: ri.ingredientId,
+          ingredientName,
+          required: Number(required.toFixed(2)),
+          available: Number(available.toFixed(2)),
+          unit: batches[0]?.unit || 'g',
+          gap: Number(gap.toFixed(2)),
+          relatedOrders,
+        });
+      }
+    });
+
+    return {
+      orderId: order.id,
+      orderNo: order.orderNo,
+      recipeName: recipe.name,
+      gaps,
+      totalGapCount: gaps.length,
+    };
+  },
+
   getCustomerOrderSummaries: (): CustomerOrderSummary[] => {
-    const { orders, getOrderWarnings } = get();
+    const { orders, getOrderWarnings, warnings, ingredients, recipes } = get();
     const customerMap = new Map<string, Order[]>();
 
     orders.forEach((order) => {
@@ -231,6 +464,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     });
 
     const summaries: CustomerOrderSummary[] = [];
+    const today = getToday();
 
     customerMap.forEach((customerOrders, customerName) => {
       const totalOrders = customerOrders.length;
@@ -238,7 +472,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       const inProductionOrders = customerOrders.filter((o) => o.status === 'in_production').length;
       const completedOrders = customerOrders.filter((o) => o.status === 'completed').length;
 
-      const today = getToday();
       const overdueOrders = customerOrders.filter(
         (o) => o.status !== 'completed' && isDateBefore(o.deliveryDate, today)
       ).length;
@@ -283,13 +516,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
         }
       } else {
         const hasWarnings = activeOrders.some((o) => {
-          const warnings = getOrderWarnings(o.id);
-          return warnings.some((w) => w.level === 'critical' || w.level === 'warning');
+          const orderWarnings = getOrderWarnings(o.id);
+          return orderWarnings.some((w) => w.level === 'critical' || w.level === 'warning');
         });
         if (hasWarnings) {
           riskLevel = 'medium';
         }
       }
+
+      const deliveryCommitment = calculateDeliveryCommitment(
+        customerOrders,
+        warnings,
+        ingredients,
+        recipes,
+        today
+      );
 
       summaries.push({
         customerName,
@@ -305,6 +546,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         riskLevel,
         orders: customerOrders,
         orderIds: customerOrders.map((o) => o.id),
+        deliveryCommitment,
       });
     });
 
@@ -794,6 +1036,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       scheduleAdjustOrderId: null,
       printOrderId: null,
       editingRecipeId: null,
+      showIngredientGapModal: false,
+      ingredientGapOrderId: null,
     });
 
     console.log('[Store] Reset to default data completed');

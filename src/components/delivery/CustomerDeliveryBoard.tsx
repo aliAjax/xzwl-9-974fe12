@@ -11,6 +11,7 @@ import {
   Clock,
   Search,
   X,
+  CalendarDays,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAppStore } from '../../store/useAppStore';
@@ -55,12 +56,17 @@ export const CustomerDeliveryBoard: React.FC = () => {
     setSortBy,
     setFilterRiskLevel,
     toggleCustomerExpand,
+    setShowThisWeekOnly,
   } = useAppStore();
 
-  const { showCompletedOrders, sortBy, filterRiskLevel, expandedCustomers } = deliveryBoard;
+  const { showCompletedOrders, sortBy, filterRiskLevel, expandedCustomers, showThisWeekOnly } = deliveryBoard;
 
   const summaries = useMemo(() => {
     let result = getCustomerOrderSummaries();
+
+    if (showThisWeekOnly) {
+      result = result.filter((s) => s.deliveryCommitment.needsThisWeek);
+    }
 
     if (filterRiskLevel !== 'all') {
       result = result.filter((s) => s.riskLevel === filterRiskLevel);
@@ -104,7 +110,9 @@ export const CustomerDeliveryBoard: React.FC = () => {
     });
 
     return result;
-  }, [getCustomerOrderSummaries, sortBy, filterRiskLevel, searchTerm]);
+  }, [getCustomerOrderSummaries, sortBy, filterRiskLevel, searchTerm, showThisWeekOnly]);
+
+  const allSummaries = useMemo(() => getCustomerOrderSummaries(), [getCustomerOrderSummaries]);
 
   const stats = useMemo(() => {
     const total = summaries.length;
@@ -115,6 +123,7 @@ export const CustomerDeliveryBoard: React.FC = () => {
     const totalInProduction = summaries.reduce((sum, s) => sum + s.inProductionOrders, 0);
     const totalCompleted = summaries.reduce((sum, s) => sum + s.completedOrders, 0);
     const totalOverdue = summaries.reduce((sum, s) => sum + s.overdueOrders, 0);
+    const thisWeekCount = allSummaries.filter((s) => s.deliveryCommitment.needsThisWeek).length;
 
     return {
       totalCustomers: total,
@@ -125,12 +134,13 @@ export const CustomerDeliveryBoard: React.FC = () => {
       totalInProduction,
       totalCompleted,
       totalOverdue,
+      thisWeekCustomers: thisWeekCount,
     };
-  }, [summaries]);
+  }, [summaries, allSummaries]);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl p-5 shadow-sm border border-incense-100">
           <div className="flex items-center justify-between">
             <div>
@@ -151,11 +161,26 @@ export const CustomerDeliveryBoard: React.FC = () => {
         <div className="bg-white rounded-xl p-5 shadow-sm border border-incense-100">
           <div className="flex items-center justify-between">
             <div>
+              <p className="text-sm text-incense-500">本周必须处理</p>
+              <p className="text-3xl font-bold text-amber-600 mt-1">{stats.thisWeekCustomers}</p>
+            </div>
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <CalendarDays size={24} className="text-amber-600" />
+            </div>
+          </div>
+          <p className="text-xs text-incense-500 mt-2">
+            7天内有订单需要交付
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-incense-100">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm text-incense-500">订单总数</p>
               <p className="text-3xl font-bold text-incense-800 mt-1">{stats.totalOrders}</p>
             </div>
-            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
-              <Package size={24} className="text-amber-600" />
+            <div className="w-12 h-12 bg-sandal-100 rounded-full flex items-center justify-center">
+              <Package size={24} className="text-sandal-600" />
             </div>
           </div>
           <p className="text-xs text-incense-500 mt-2">
@@ -226,7 +251,33 @@ export const CustomerDeliveryBoard: React.FC = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-2">
+              <CalendarDays
+                size={16}
+                className={clsx(
+                  'transition-colors',
+                  showThisWeekOnly ? 'text-amber-500' : 'text-incense-400'
+                )}
+              />
+              <button
+                onClick={() => setShowThisWeekOnly(!showThisWeekOnly)}
+                className={clsx(
+                  'flex items-center gap-2 px-3 py-1 text-sm rounded-lg transition-colors',
+                  showThisWeekOnly
+                    ? 'bg-amber-500 text-white'
+                    : 'text-incense-600 hover:bg-incense-100'
+                )}
+              >
+                本周必须处理
+                {showThisWeekOnly && (
+                  <span className="bg-white/30 px-1.5 py-0.5 rounded text-xs rounded-full">
+                    {stats.thisWeekCustomers}
+                  </span>
+                )}
+              </button>
+            </div>
+
             <div className="flex items-center gap-2">
               <Filter size={16} className="text-incense-400" />
               <span className="text-sm text-incense-600">风险筛选：</span>
@@ -296,9 +347,11 @@ export const CustomerDeliveryBoard: React.FC = () => {
             <p className="text-sm text-incense-400">
               {searchTerm.trim()
                 ? '未找到匹配的客户或订单，请尝试其他搜索关键词'
-                : filterRiskLevel !== 'all'
-                  ? '当前筛选条件下没有客户数据，请调整筛选条件'
-                  : '还没有订单数据，创建第一个订单开始吧'}
+                : showThisWeekOnly
+                  ? '本周没有需要处理的客户订单'
+                  : filterRiskLevel !== 'all'
+                    ? '当前筛选条件下没有客户数据，请调整筛选条件'
+                    : '还没有订单数据，创建第一个订单开始吧'}
             </p>
           </div>
         ) : (

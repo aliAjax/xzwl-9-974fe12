@@ -172,6 +172,8 @@ export interface AppState {
   purchasePlanItems: PurchasePlanItem[];
   supplierPurchaseGroups: SupplierPurchaseGroup[];
   deliveryBoard: CustomerDeliveryBoardState;
+  showIngredientGapModal: boolean;
+  ingredientGapOrderId: string | null;
 }
 
 export interface CreateOrderData {
@@ -307,8 +309,12 @@ export interface AppActions {
   setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) => void;
   setFilterRiskLevel: (level: RiskLevel | 'all') => void;
   toggleCustomerExpand: (customerName: string) => void;
+  setShowThisWeekOnly: (show: boolean) => void;
   getCustomerOrderSummaries: () => CustomerOrderSummary[];
   getCustomerOrderSummary: (customerName: string) => CustomerOrderSummary | undefined;
+  getOrderMaterialGap: (orderId: string) => OrderMaterialGap | null;
+  setShowIngredientGapModal: (show: boolean) => void;
+  setIngredientGapOrderId: (id: string | null) => void;
   createRecipe: (data: RecipeFormData) => Recipe;
   updateRecipe: (id: string, data: RecipeFormData) => Recipe;
   deleteRecipe: (id: string) => void;
@@ -364,6 +370,9 @@ export interface AppState {
   purchaseDecisions: PurchaseDecision[];
   purchasePlanItems: PurchasePlanItem[];
   supplierPurchaseGroups: SupplierPurchaseGroup[];
+  deliveryBoard: CustomerDeliveryBoardState;
+  showIngredientGapModal: boolean;
+  ingredientGapOrderId: string | null;
 }
 
 export const STEP_CONFIG: Record<StepType, { name: string; icon: string; color: string }> = {
@@ -377,6 +386,20 @@ export const STEP_CONFIG: Record<StepType, { name: string; icon: string; color: 
 export const STEP_ORDER: StepType[] = ['kneading', 'shaping', 'drying', 'cellaring', 'packaging'];
 
 export type RiskLevel = 'critical' | 'high' | 'medium' | 'low';
+
+export interface DeliveryCommitmentSummary {
+  earliestDeliveryDate: string;
+  earliestDaysRemaining: number;
+  hasOverdueRisk: boolean;
+  overdueRiskCount: number;
+  criticalBlockingSteps: { stepName: string; orderCount: number; orderNos: string[] }[];
+  materialShortageRisk: boolean;
+  materialShortageCount: number;
+  materialShortageDetails: { ingredientName: string; gap: number; unit: string; orderNos: string[] }[];
+  highPriorityOrderCount: number;
+  highPriorityOrderNos: string[];
+  needsThisWeek: boolean;
+}
 
 export interface CustomerOrderSummary {
   customerName: string;
@@ -392,6 +415,31 @@ export interface CustomerOrderSummary {
   riskLevel: RiskLevel;
   orders: Order[];
   orderIds: string[];
+  deliveryCommitment: DeliveryCommitmentSummary;
+}
+
+export interface MaterialGapDetail {
+  ingredientId: string;
+  ingredientName: string;
+  required: number;
+  available: number;
+  unit: string;
+  gap: number;
+  relatedOrders: {
+    orderId: string;
+    orderNo: string;
+    requiredQuantity: number;
+    deliveryDate: string;
+    priority: Priority;
+  }[];
+}
+
+export interface OrderMaterialGap {
+  orderId: string;
+  orderNo: string;
+  recipeName: string;
+  gaps: MaterialGapDetail[];
+  totalGapCount: number;
 }
 
 export interface CustomerDeliveryBoardState {
@@ -399,6 +447,12 @@ export interface CustomerDeliveryBoardState {
   sortBy: 'deliveryDate' | 'riskLevel' | 'priority' | 'progress';
   filterRiskLevel: RiskLevel | 'all';
   expandedCustomers: string[];
+  showThisWeekOnly: boolean;
+}
+
+export interface IngredientGapState {
+  showIngredientGapModal: boolean;
+  ingredientGapOrderId: string | null;
 }
 
 export interface CustomerDeliveryBoardActions {
@@ -406,8 +460,12 @@ export interface CustomerDeliveryBoardActions {
   setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) => void;
   setFilterRiskLevel: (level: RiskLevel | 'all') => void;
   toggleCustomerExpand: (customerName: string) => void;
+  setShowThisWeekOnly: (show: boolean) => void;
   getCustomerOrderSummaries: () => CustomerOrderSummary[];
   getCustomerOrderSummary: (customerName: string) => CustomerOrderSummary | undefined;
+  getOrderMaterialGap: (orderId: string) => OrderMaterialGap | null;
+  setShowIngredientGapModal: (show: boolean) => void;
+  setIngredientGapOrderId: (id: string | null) => void;
 }
 
 export interface CraftsmanWorkload {
