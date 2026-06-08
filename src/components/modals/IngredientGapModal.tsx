@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
 import { formatDateChinese } from '../../utils/dateUtils';
-import { clsx } from 'clsx';
 import { Badge } from '../common/Badge';
 
 const priorityLabel = {
