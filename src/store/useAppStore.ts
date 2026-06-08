@@ -223,7 +223,7 @@ const calculateDeliveryCommitment = (
 
   const needsThisWeek = activeOrders.some((o) => {
     const days = daysBetween(today, o.deliveryDate);
-    return days <= 7 && days >= 0;
+    return days <= 7;
   });
 
   return {
