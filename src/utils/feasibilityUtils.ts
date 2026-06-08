@@ -16,7 +16,6 @@ import {
   addDaysToDate,
   daysBetween,
   isDateBefore,
-  isDateAfter,
   formatDateChinese,
 } from './dateUtils';
 import { analyzeAllCraftsmenWorkload } from './workloadUtils';
@@ -114,12 +113,8 @@ const calculateWorkload = (
     daysAhead: Math.max(analysisDays, 30),
   });
 
-  const requiredSkills = new Set<StepType>();
-  STEP_ORDER.forEach((step) => requiredSkills.add(step));
-
   const craftsmanLoad: FeasibilityCheckResult['workload']['craftsmanLoad'] = workloads.map(
     (wl) => {
-      const hasRequiredSkill = wl.stepTypes.some((s) => requiredSkills.has(s));
       const availableDays = wl.isResting
         ? 0
         : Math.max(0, analysisDays - wl.totalDurationDays);
@@ -314,7 +309,6 @@ const generateSummary = (
   issues: FeasibilityIssue[],
   timeline: FeasibilityCheckResult['timeline']
 ): string => {
-  const issueCount = issues.length;
   const criticalCount = issues.filter((i) => i.level === 'critical').length;
   const warningCount = issues.filter((i) => i.level === 'warning').length;
 
