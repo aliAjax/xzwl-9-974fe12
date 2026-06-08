@@ -152,6 +152,55 @@ const recalculateDerivedData = (state: AppState): Partial<AppState> => {
   };
 };
 
+const recalculatePurchasePlan = (state: AppState): Partial<AppState> => {
+  const { purchaseSuggestions, purchaseDecisions } = state;
+  const planItems = mergeSuggestionsWithDecisions(purchaseSuggestions, purchaseDecisions);
+  const supplierGroups = groupBySupplier(planItems);
+  return {
+    purchasePlanItems: planItems,
+    supplierPurchaseGroups: supplierGroups,
+  };
+};
+
+const createCommitHelpers = (
+  set: (
+    partial: AppStore | Partial<AppStore> | ((state: AppStore) => AppStore | Partial<AppStore>),
+    replace?: false
+  ) => void,
+  get: () => AppStore
+) => {
+  const commitStateChange = (stateUpdate: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => {
+    if (typeof stateUpdate === 'function') {
+      set((state) => stateUpdate(state));
+    } else {
+      set(stateUpdate);
+    }
+    set(recalculateDerivedData(get()));
+    persistState(get());
+  };
+
+  const commitPurchaseChange = (stateUpdate: Partial<AppState>) => {
+    set(stateUpdate);
+    set(recalculatePurchasePlan(get()));
+    persistState(get());
+  };
+
+  const commitViewPreference = (stateUpdate: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => {
+    if (typeof stateUpdate === 'function') {
+      set((state) => stateUpdate(state));
+    } else {
+      set(stateUpdate);
+    }
+    persistState(get());
+  };
+
+  return {
+    commitStateChange,
+    commitPurchaseChange,
+    commitViewPreference,
+  };
+};
+
 const generateOrderId = (): string => `order-${Date.now().toString().slice(-6)}`;
 const generateOrderNo = (): string => {
   const today = getToday();
@@ -162,292 +211,252 @@ const generateOrderNo = (): string => {
 
 const generateRecipeId = (): string => `recipe-${Date.now().toString().slice(-6)}`;
 
-export const useAppStore = create<AppStore>((set, get) => ({
-  ...initialState,
+export const useAppStore = create<AppStore>((set, get) => {
+  const { commitStateChange, commitPurchaseChange, commitViewPreference } = createCommitHelpers(set, get);
 
-  setCurrentView: (view: ViewType) => {
-    set({ currentView: view });
-    persistState(get());
-  },
+  return {
+    ...initialState,
 
-  setSelectedDate: (date: string) => {
-    set({ selectedDate: date });
-    persistState(get());
-  },
+    setCurrentView: (view: ViewType) => commitViewPreference({ currentView: view }),
 
-  setSelectedOrderId: (id: string | null) => set({ selectedOrderId: id }),
+    setSelectedDate: (date: string) => commitViewPreference({ selectedDate: date }),
 
-  setShowIngredientPanel: (show: boolean) => {
-    set({ showIngredientPanel: show });
-    persistState(get());
-  },
+    setSelectedOrderId: (id: string | null) => set({ selectedOrderId: id }),
 
-  setShowWarningPanel: (show: boolean) => {
-    set({ showWarningPanel: show });
-    persistState(get());
-  },
+    setShowIngredientPanel: (show: boolean) => commitViewPreference({ showIngredientPanel: show }),
 
-  setShowCreateOrderModal: (show: boolean) => set({ showCreateOrderModal: show }),
+    setShowWarningPanel: (show: boolean) => commitViewPreference({ showWarningPanel: show }),
 
-  setShowRecipePanel: (show: boolean) => {
-    set({ showRecipePanel: show });
-    persistState(get());
-  },
+    setShowCreateOrderModal: (show: boolean) => set({ showCreateOrderModal: show }),
 
-  setShowRecipeModal: (show: boolean) => set({ showRecipeModal: show }),
+    setShowRecipePanel: (show: boolean) => commitViewPreference({ showRecipePanel: show }),
 
-  setShowSchedulePanel: (show: boolean) => {
-    set({ showSchedulePanel: show });
-    persistState(get());
-  },
+    setShowRecipeModal: (show: boolean) => set({ showRecipeModal: show }),
 
-  setShowPrintPreview: (show: boolean) => set({ showPrintPreview: show }),
+    setShowSchedulePanel: (show: boolean) => commitViewPreference({ showSchedulePanel: show }),
 
-  setShowPurchaseSuggestion: (show: boolean) => {
-    set({ showPurchaseSuggestion: show });
-    persistState(get());
-  },
+    setShowPrintPreview: (show: boolean) => set({ showPrintPreview: show }),
 
-  setPrintOrderId: (id: string | null) => set({ printOrderId: id }),
+    setShowPurchaseSuggestion: (show: boolean) => commitViewPreference({ showPurchaseSuggestion: show }),
 
-  setEditingRecipeId: (id: string | null) => set({ editingRecipeId: id }),
+    setPrintOrderId: (id: string | null) => set({ printOrderId: id }),
 
-  setCopyingRecipeId: (id: string | null) => set({ copyingRecipeId: id }),
+    setEditingRecipeId: (id: string | null) => set({ editingRecipeId: id }),
 
-  setShowScheduleAdjustModal: (show: boolean) => set({ showScheduleAdjustModal: show }),
+    setCopyingRecipeId: (id: string | null) => set({ copyingRecipeId: id }),
 
-  setScheduleAdjustOrderId: (id: string | null) => set({ scheduleAdjustOrderId: id }),
+    setShowScheduleAdjustModal: (show: boolean) => set({ showScheduleAdjustModal: show }),
 
-  setShowCompletedOrders: (show: boolean) => {
-    set((state) => ({
-      deliveryBoard: { ...state.deliveryBoard, showCompletedOrders: show },
-    }));
-    persistState(get());
-  },
+    setScheduleAdjustOrderId: (id: string | null) => set({ scheduleAdjustOrderId: id }),
 
-  setSortBy: (sortBy: AppState['deliveryBoard']['sortBy']) => {
-    set((state) => ({
-      deliveryBoard: { ...state.deliveryBoard, sortBy },
-    }));
-    persistState(get());
-  },
+    setShowCompletedOrders: (show: boolean) =>
+      commitViewPreference((state) => ({
+        deliveryBoard: { ...state.deliveryBoard, showCompletedOrders: show },
+      })),
 
-  setFilterRiskLevel: (level: AppState['deliveryBoard']['filterRiskLevel']) => {
-    set((state) => ({
-      deliveryBoard: { ...state.deliveryBoard, filterRiskLevel: level },
-    }));
-    persistState(get());
-  },
+    setSortBy: (sortBy: AppState['deliveryBoard']['sortBy']) =>
+      commitViewPreference((state) => ({
+        deliveryBoard: { ...state.deliveryBoard, sortBy },
+      })),
 
-  toggleCustomerExpand: (customerName: string) => {
-    set((state) => {
-      const expanded = state.deliveryBoard.expandedCustomers;
-      const isExpanded = expanded.includes(customerName);
-      return {
-        deliveryBoard: {
-          ...state.deliveryBoard,
-          expandedCustomers: isExpanded
-            ? expanded.filter((c) => c !== customerName)
-            : [...expanded, customerName],
-        },
-      };
-    });
-    persistState(get());
-  },
+    setFilterRiskLevel: (level: AppState['deliveryBoard']['filterRiskLevel']) =>
+      commitViewPreference((state) => ({
+        deliveryBoard: { ...state.deliveryBoard, filterRiskLevel: level },
+      })),
 
-  setShowThisWeekOnly: (show: boolean) => {
-    set((state) => ({
-      deliveryBoard: { ...state.deliveryBoard, showThisWeekOnly: show },
-    }));
-    persistState(get());
-  },
-
-  setShowIngredientGapModal: (show: boolean) => set({ showIngredientGapModal: show }),
-
-  setIngredientGapOrderId: (id: string | null) => set({ ingredientGapOrderId: id }),
-
-  getOrderMaterialGap: (orderId: string) => selectOrderMaterialGap(get(), orderId),
-
-  getCustomerOrderSummaries: () => selectCustomerOrderSummaries(get()),
-
-  getCustomerOrderSummary: (customerName: string) => selectCustomerOrderSummary(get(), customerName),
-
-  createRecipe: (data: RecipeFormData): Recipe => {
-    const recipeId = generateRecipeId();
-
-    const newRecipe: Recipe = {
-      id: recipeId,
-      name: data.name,
-      description: data.description,
-      ingredients: data.ingredients,
-      dryingDays: data.dryingDays,
-      cellaringDays: data.cellaringDays,
-      craftNotes: data.craftNotes,
-    };
-
-    set((state) => ({
-      recipes: [...state.recipes, newRecipe],
-      showRecipeModal: false,
-      editingRecipeId: null,
-    }));
-
-    set(recalculateDerivedData(get()));
-    persistState(get());
-    return newRecipe;
-  },
-
-  updateRecipe: (id: string, data: RecipeFormData): Recipe => {
-    const updatedRecipe: Recipe = {
-      id,
-      name: data.name,
-      description: data.description,
-      ingredients: data.ingredients,
-      dryingDays: data.dryingDays,
-      cellaringDays: data.cellaringDays,
-      craftNotes: data.craftNotes,
-    };
-
-    set((state) => ({
-      recipes: state.recipes.map((r) => (r.id === id ? updatedRecipe : r)),
-      showRecipeModal: false,
-      editingRecipeId: null,
-    }));
-
-    set(recalculateDerivedData(get()));
-    persistState(get());
-    return updatedRecipe;
-  },
-
-  deleteRecipe: (id: string) => {
-    set((state) => ({
-      recipes: state.recipes.filter((r) => r.id !== id),
-    }));
-    set(recalculateDerivedData(get()));
-    persistState(get());
-  },
-
-  createOrder: (data: CreateOrderData): Order => {
-    const orderId = generateOrderId();
-    const orderNo = generateOrderNo();
-    const today = getToday();
-
-    const recipe = get().getRecipeById(data.recipeId);
-
-    const stepDurations: Record<StepType, number> = {
-      kneading: 2,
-      shaping: 3,
-      drying: recipe?.dryingDays || 15,
-      cellaring: recipe?.cellaringDays || 30,
-      packaging: 2,
-    };
-
-    const stepNames: Record<StepType, string> = {
-      kneading: '揉料',
-      shaping: '成型',
-      drying: '阴干',
-      cellaring: '窖藏',
-      packaging: '包装',
-    };
-
-    const stepTypes: StepType[] = ['kneading', 'shaping', 'drying', 'cellaring', 'packaging'];
-    const totalDuration = stepTypes.reduce((sum, type) => sum + stepDurations[type], 0);
-    const startDate = addDaysToDate(data.deliveryDate, -totalDuration);
-
-    let currentDate = startDate;
-
-    const steps = stepTypes.map((stepType, index) => {
-      const duration = stepDurations[stepType];
-      const stepStartDate = currentDate;
-      const stepEndDate = addDaysToDate(stepStartDate, duration);
-      currentDate = stepEndDate;
-
-      return {
-        id: `${orderId}-step-${index}`,
-        orderId,
-        stepType,
-        stepName: stepNames[stepType],
-        status: 'not_started' as const,
-        startDate: stepStartDate,
-        endDate: stepEndDate,
-        durationDays: duration,
-        notes: '',
-        assignee: '',
-      };
-    });
-
-    const newOrder: Order = {
-      id: orderId,
-      orderNo,
-      customerName: data.customerName,
-      recipeId: data.recipeId,
-      quantity: data.quantity,
-      unit: data.unit,
-      orderDate: today,
-      deliveryDate: data.deliveryDate,
-      status: 'pending',
-      priority: data.priority,
-      currentStepIndex: -1,
-      steps,
-    };
-
-    set((state) => ({
-      orders: [newOrder, ...state.orders],
-      showCreateOrderModal: false,
-    }));
-
-    set(recalculateDerivedData(get()));
-    persistState(get());
-    return newOrder;
-  },
-
-  updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => {
-    set((state) => ({
-      orders: state.orders.map((order) => {
-        if (order.id !== orderId) return order;
+    toggleCustomerExpand: (customerName: string) =>
+      commitViewPreference((state) => {
+        const expanded = state.deliveryBoard.expandedCustomers;
+        const isExpanded = expanded.includes(customerName);
         return {
-          ...order,
-          steps: order.steps.map((step) => {
-            if (step.id !== stepId) return step;
-            return { ...step, status };
-          }),
+          deliveryBoard: {
+            ...state.deliveryBoard,
+            expandedCustomers: isExpanded
+              ? expanded.filter((c) => c !== customerName)
+              : [...expanded, customerName],
+          },
         };
       }),
-    }));
-    set(recalculateDerivedData(get()));
-    persistState(get());
-  },
 
-  assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => {
-    set((state) => ({
-      orders: state.orders.map((order) => {
-        if (order.id !== orderId) return order;
+    setShowThisWeekOnly: (show: boolean) =>
+      commitViewPreference((state) => ({
+        deliveryBoard: { ...state.deliveryBoard, showThisWeekOnly: show },
+      })),
+
+    setShowIngredientGapModal: (show: boolean) => set({ showIngredientGapModal: show }),
+
+    setIngredientGapOrderId: (id: string | null) => set({ ingredientGapOrderId: id }),
+
+    getOrderMaterialGap: (orderId: string) => selectOrderMaterialGap(get(), orderId),
+
+    getCustomerOrderSummaries: () => selectCustomerOrderSummaries(get()),
+
+    getCustomerOrderSummary: (customerName: string) => selectCustomerOrderSummary(get(), customerName),
+
+    createRecipe: (data: RecipeFormData): Recipe => {
+      const recipeId = generateRecipeId();
+
+      const newRecipe: Recipe = {
+        id: recipeId,
+        name: data.name,
+        description: data.description,
+        ingredients: data.ingredients,
+        dryingDays: data.dryingDays,
+        cellaringDays: data.cellaringDays,
+        craftNotes: data.craftNotes,
+      };
+
+      commitStateChange({
+        recipes: [...get().recipes, newRecipe],
+        showRecipeModal: false,
+        editingRecipeId: null,
+      });
+
+      return newRecipe;
+    },
+
+    updateRecipe: (id: string, data: RecipeFormData): Recipe => {
+      const updatedRecipe: Recipe = {
+        id,
+        name: data.name,
+        description: data.description,
+        ingredients: data.ingredients,
+        dryingDays: data.dryingDays,
+        cellaringDays: data.cellaringDays,
+        craftNotes: data.craftNotes,
+      };
+
+      commitStateChange({
+        recipes: get().recipes.map((r) => (r.id === id ? updatedRecipe : r)),
+        showRecipeModal: false,
+        editingRecipeId: null,
+      });
+
+      return updatedRecipe;
+    },
+
+    deleteRecipe: (id: string) => {
+      commitStateChange({
+        recipes: get().recipes.filter((r) => r.id !== id),
+      });
+    },
+
+    createOrder: (data: CreateOrderData): Order => {
+      const orderId = generateOrderId();
+      const orderNo = generateOrderNo();
+      const today = getToday();
+
+      const recipe = get().getRecipeById(data.recipeId);
+
+      const stepDurations: Record<StepType, number> = {
+        kneading: 2,
+        shaping: 3,
+        drying: recipe?.dryingDays || 15,
+        cellaring: recipe?.cellaringDays || 30,
+        packaging: 2,
+      };
+
+      const stepNames: Record<StepType, string> = {
+        kneading: '揉料',
+        shaping: '成型',
+        drying: '阴干',
+        cellaring: '窖藏',
+        packaging: '包装',
+      };
+
+      const stepTypes: StepType[] = ['kneading', 'shaping', 'drying', 'cellaring', 'packaging'];
+      const totalDuration = stepTypes.reduce((sum, type) => sum + stepDurations[type], 0);
+      const startDate = addDaysToDate(data.deliveryDate, -totalDuration);
+
+      let currentDate = startDate;
+
+      const steps = stepTypes.map((stepType, index) => {
+        const duration = stepDurations[stepType];
+        const stepStartDate = currentDate;
+        const stepEndDate = addDaysToDate(stepStartDate, duration);
+        currentDate = stepEndDate;
+
         return {
-          ...order,
-          steps: order.steps.map((step) => {
-            if (step.id !== stepId) return step;
-            return { ...step, assignee: craftsmanName };
-          }),
+          id: `${orderId}-step-${index}`,
+          orderId,
+          stepType,
+          stepName: stepNames[stepType],
+          status: 'not_started' as const,
+          startDate: stepStartDate,
+          endDate: stepEndDate,
+          durationDays: duration,
+          notes: '',
+          assignee: '',
         };
-      }),
-    }));
-    persistState(get());
-  },
+      });
 
-  moveOrderToStep: (orderId: string, targetStepType: StepType) => {
-    const { orders, recipes } = get();
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return;
+      const newOrder: Order = {
+        id: orderId,
+        orderNo,
+        customerName: data.customerName,
+        recipeId: data.recipeId,
+        quantity: data.quantity,
+        unit: data.unit,
+        orderDate: today,
+        deliveryDate: data.deliveryDate,
+        status: 'pending',
+        priority: data.priority,
+        currentStepIndex: -1,
+        steps,
+      };
 
-    const recipe = recipes.find((r) => r.id === order.recipeId);
-    if (!recipe) return;
+      commitStateChange({
+        orders: [newOrder, ...get().orders],
+        showCreateOrderModal: false,
+      });
 
-    const targetStepIndex = STEP_ORDER.indexOf(targetStepType);
-    if (targetStepIndex < 0) return;
+      return newOrder;
+    },
 
-    const today = getToday();
+    updateStepStatus: (orderId: string, stepId: string, status: StepStatus) => {
+      commitStateChange({
+        orders: get().orders.map((order) => {
+          if (order.id !== orderId) return order;
+          return {
+            ...order,
+            steps: order.steps.map((step) => {
+              if (step.id !== stepId) return step;
+              return { ...step, status };
+            }),
+          };
+        }),
+      });
+    },
 
-    set((state) => ({
-      orders: state.orders.map((o) => {
+    assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => {
+      commitViewPreference({
+        orders: get().orders.map((order) => {
+          if (order.id !== orderId) return order;
+          return {
+            ...order,
+            steps: order.steps.map((step) => {
+              if (step.id !== stepId) return step;
+              return { ...step, assignee: craftsmanName };
+            }),
+          };
+        }),
+      });
+    },
+
+    moveOrderToStep: (orderId: string, targetStepType: StepType) => {
+      const { orders, recipes } = get();
+      const order = orders.find((o) => o.id === orderId);
+      if (!order) return;
+
+      const recipe = recipes.find((r) => r.id === order.recipeId);
+      if (!recipe) return;
+
+      const targetStepIndex = STEP_ORDER.indexOf(targetStepType);
+      if (targetStepIndex < 0) return;
+
+      const today = getToday();
+
+      const updatedOrders = orders.map((o) => {
         if (o.id !== orderId) return o;
 
         let runningDate = today;
@@ -480,7 +489,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           };
         });
 
-        const newStatus =
+        const newStatus: Order['status'] =
           targetStepIndex >= STEP_ORDER.length
             ? 'completed'
             : targetStepIndex >= 0
@@ -493,253 +502,225 @@ export const useAppStore = create<AppStore>((set, get) => ({
           currentStepIndex: targetStepIndex,
           status: newStatus,
         };
-      }),
-    }));
+      });
 
-    set(recalculateDerivedData(get()));
-    persistState(get());
-  },
+      commitStateChange({ orders: updatedOrders });
+    },
 
-  updateProductionStep: (orderId: string, stepId: string, updates: StepUpdateData) => {
-    const { orders } = get();
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return;
+    updateProductionStep: (orderId: string, stepId: string, updates: StepUpdateData) => {
+      const { orders } = get();
+      const order = orders.find((o) => o.id === orderId);
+      if (!order) return;
 
-    const validation = validateStepAdjustment(order, stepId, updates);
-    if (!validation.valid) return;
+      const validation = validateStepAdjustment(order, stepId, updates);
+      if (!validation.valid) return;
 
-    const updatedSteps = applyStepAdjustment(order, stepId, updates);
+      const updatedSteps = applyStepAdjustment(order, stepId, updates);
 
-    set((state) => ({
-      orders: state.orders.map((o) => {
-        if (o.id !== orderId) return o;
-        return {
-          ...o,
-          steps: updatedSteps,
-        };
-      }),
-    }));
+      commitStateChange({
+        orders: orders.map((o) => {
+          if (o.id !== orderId) return o;
+          return { ...o, steps: updatedSteps };
+        }),
+      });
+    },
 
-    set(recalculateDerivedData(get()));
-    persistState(get());
-  },
+    completeOrder: (orderId: string) => {
+      commitStateChange({
+        orders: get().orders.map((order) => {
+          if (order.id !== orderId) return order;
 
-  completeOrder: (orderId: string) => {
-    set((state) => ({
-      orders: state.orders.map((order) => {
-        if (order.id !== orderId) return order;
-
-        return {
-          ...order,
-          status: 'completed',
-          currentStepIndex: STEP_ORDER.length,
-          steps: order.steps.map((step) => ({
-            ...step,
+          return {
+            ...order,
             status: 'completed',
-            assignee: '',
-          })),
-        };
-      }),
-    }));
-    set(recalculateDerivedData(get()));
-    persistState(get());
-  },
+            currentStepIndex: STEP_ORDER.length,
+            steps: order.steps.map((step) => ({
+              ...step,
+              status: 'completed',
+              assignee: '',
+            })),
+          };
+        }),
+      });
+    },
 
-  resolveWarning: (warningId: string) => {
-    set((state) => ({
-      warnings: state.warnings.map((w) =>
-        w.id === warningId ? { ...w, isResolved: true } : w
-      ),
-    }));
-    persistState(get());
-  },
+    resolveWarning: (warningId: string) => {
+      commitViewPreference({
+        warnings: get().warnings.map((w) =>
+          w.id === warningId ? { ...w, isResolved: true } : w
+        ),
+      });
+    },
 
-  recalculateWarnings: () => {
-    const { orders, ingredients, recipes } = get();
-    const existingResolved = get().warnings.filter((w) => w.isResolved);
-    const newWarnings = calculateAllWarnings(orders, ingredients, recipes);
-    const mergedWarnings = mergeWarningsWithResolvedState(newWarnings, existingResolved);
-    set({ warnings: mergedWarnings });
-  },
+    recalculateWarnings: () => {
+      const { orders, ingredients, recipes } = get();
+      const existingResolved = get().warnings.filter((w) => w.isResolved);
+      const newWarnings = calculateAllWarnings(orders, ingredients, recipes);
+      const mergedWarnings = mergeWarningsWithResolvedState(newWarnings, existingResolved);
+      set({ warnings: mergedWarnings });
+    },
 
-  recalculatePurchaseSuggestions: () => {
-    const { orders, ingredients, recipes, purchaseDecisions } = get();
-    const suggestions = calculatePurchaseSuggestions(orders, ingredients, recipes);
-    const cleanedDecisions = cleanObsoleteDecisions(
-      purchaseDecisions,
-      suggestions.map((s) => s.ingredientId)
-    );
-    const planItems = mergeSuggestionsWithDecisions(suggestions, cleanedDecisions);
-    const supplierGroups = groupBySupplier(planItems);
-    set({
-      purchaseSuggestions: suggestions,
-      purchaseDecisions: cleanedDecisions,
-      purchasePlanItems: planItems,
-      supplierPurchaseGroups: supplierGroups,
-    });
-  },
+    recalculatePurchaseSuggestions: () => {
+      const { orders, ingredients, recipes, purchaseDecisions } = get();
+      const suggestions = calculatePurchaseSuggestions(orders, ingredients, recipes);
+      const cleanedDecisions = cleanObsoleteDecisions(
+        purchaseDecisions,
+        suggestions.map((s) => s.ingredientId)
+      );
+      const planItems = mergeSuggestionsWithDecisions(suggestions, cleanedDecisions);
+      const supplierGroups = groupBySupplier(planItems);
+      set({
+        purchaseSuggestions: suggestions,
+        purchaseDecisions: cleanedDecisions,
+        purchasePlanItems: planItems,
+        supplierPurchaseGroups: supplierGroups,
+      });
+    },
 
-  recalculatePurchasePlan: () => {
-    const { purchaseSuggestions, purchaseDecisions } = get();
-    const planItems = mergeSuggestionsWithDecisions(purchaseSuggestions, purchaseDecisions);
-    const supplierGroups = groupBySupplier(planItems);
-    set({
-      purchasePlanItems: planItems,
-      supplierPurchaseGroups: supplierGroups,
-    });
-  },
+    recalculatePurchasePlan: () => {
+      set(recalculatePurchasePlan(get()));
+    },
 
-  updatePurchaseQuantity: (ingredientId: string, quantity: number | null) => {
-    const { purchaseDecisions } = get();
-    const newDecisions = createPurchaseDecision(
-      ingredientId,
-      { adjustedQuantity: quantity },
-      purchaseDecisions
-    );
-    set({ purchaseDecisions: newDecisions });
-    get().recalculatePurchasePlan();
-    persistState(get());
-  },
+    updatePurchaseQuantity: (ingredientId: string, quantity: number | null) => {
+      const { purchaseDecisions } = get();
+      const newDecisions = createPurchaseDecision(
+        ingredientId,
+        { adjustedQuantity: quantity },
+        purchaseDecisions
+      );
+      commitPurchaseChange({ purchaseDecisions: newDecisions });
+    },
 
-  updatePurchaseStatus: (ingredientId: string, status: PurchaseStatus) => {
-    const { purchaseDecisions } = get();
-    const newDecisions = createPurchaseDecision(
-      ingredientId,
-      { status },
-      purchaseDecisions
-    );
-    set({ purchaseDecisions: newDecisions });
-    get().recalculatePurchasePlan();
-    persistState(get());
-  },
+    updatePurchaseStatus: (ingredientId: string, status: PurchaseStatus) => {
+      const { purchaseDecisions } = get();
+      const newDecisions = createPurchaseDecision(
+        ingredientId,
+        { status },
+        purchaseDecisions
+      );
+      commitPurchaseChange({ purchaseDecisions: newDecisions });
+    },
 
-  updatePurchaseNotes: (ingredientId: string, notes: string) => {
-    const { purchaseDecisions } = get();
-    const newDecisions = createPurchaseDecision(
-      ingredientId,
-      { notes },
-      purchaseDecisions
-    );
-    set({ purchaseDecisions: newDecisions });
-    persistState(get());
-  },
+    updatePurchaseNotes: (ingredientId: string, notes: string) => {
+      const { purchaseDecisions } = get();
+      const newDecisions = createPurchaseDecision(
+        ingredientId,
+        { notes },
+        purchaseDecisions
+      );
+      commitViewPreference({ purchaseDecisions: newDecisions });
+    },
 
-  clearPurchaseDecision: (ingredientId: string) => {
-    const { purchaseDecisions } = get();
-    const newDecisions = purchaseDecisions.filter((d) => d.ingredientId !== ingredientId);
-    set({ purchaseDecisions: newDecisions });
-    get().recalculatePurchasePlan();
-    persistState(get());
-  },
+    clearPurchaseDecision: (ingredientId: string) => {
+      const { purchaseDecisions } = get();
+      const newDecisions = purchaseDecisions.filter((d) => d.ingredientId !== ingredientId);
+      commitPurchaseChange({ purchaseDecisions: newDecisions });
+    },
 
-  clearAllPurchaseDecisions: () => {
-    set({ purchaseDecisions: [] });
-    get().recalculatePurchasePlan();
-    persistState(get());
-  },
+    clearAllPurchaseDecisions: () => {
+      commitPurchaseChange({ purchaseDecisions: [] });
+    },
 
-  getOrderWarnings: (orderId: string) => selectOrderWarnings(get(), orderId),
+    getOrderWarnings: (orderId: string) => selectOrderWarnings(get(), orderId),
 
-  getRecipeById: (recipeId: string) => selectRecipeById(get(), recipeId),
+    getRecipeById: (recipeId: string) => selectRecipeById(get(), recipeId),
 
-  getOrdersByStep: (stepType: StepType) => selectOrdersByStep(get(), stepType),
+    getOrdersByStep: (stepType: StepType) => selectOrdersByStep(get(), stepType),
 
-  getOrdersByDate: (date: string) => selectOrdersByDate(get(), date),
+    getOrdersByDate: (date: string) => selectOrdersByDate(get(), date),
 
-  getCraftsmanTasks: (craftsmanName: string) => selectCraftsmanTasks(get(), craftsmanName),
+    getCraftsmanTasks: (craftsmanName: string) => selectCraftsmanTasks(get(), craftsmanName),
 
-  getCraftsmanWorkload: (craftsmanId: string, options) => selectCraftsmanWorkload(get(), craftsmanId, options),
+    getCraftsmanWorkload: (craftsmanId: string, options) => selectCraftsmanWorkload(get(), craftsmanId, options),
 
-  getAllCraftsmenWorkload: (options) => selectAllCraftsmenWorkload(get(), options),
+    getAllCraftsmenWorkload: (options) => selectAllCraftsmenWorkload(get(), options),
 
-  getSortedCraftsmenForAssignment: (requiredSkill: StepType) => selectSortedCraftsmenForAssignment(get(), requiredSkill),
+    getSortedCraftsmenForAssignment: (requiredSkill: StepType) => selectSortedCraftsmenForAssignment(get(), requiredSkill),
 
-  setShowSandboxModal: (show: boolean) => set({ showSandboxModal: show }),
+    setShowSandboxModal: (show: boolean) => set({ showSandboxModal: show }),
 
-  setSandboxSelectedOrderIds: (orderIds: string[]) => set({ sandboxSelectedOrderIds: orderIds }),
+    setSandboxSelectedOrderIds: (orderIds: string[]) => set({ sandboxSelectedOrderIds: orderIds }),
 
-  setSandboxPriorityStrategy: (strategy) => set({ sandboxPriorityStrategy: strategy }),
+    setSandboxPriorityStrategy: (strategy) => set({ sandboxPriorityStrategy: strategy }),
 
-  setSandboxResult: (result) => set({ sandboxResult: result }),
+    setSandboxResult: (result) => set({ sandboxResult: result }),
 
-  generateSandboxPreview: (orderIds, strategy) => {
-    const { orders, craftsmen, recipes, ingredients } = get();
-    const selectedOrders = orders.filter((o) => orderIds.includes(o.id) && o.status !== 'completed');
-    const result = generateSandboxSchedule(
-      selectedOrders,
-      strategy,
-      orders,
-      craftsmen,
-      recipes,
-      ingredients
-    );
-    set({ sandboxResult: result });
-    return result;
-  },
+    generateSandboxPreview: (orderIds, strategy) => {
+      const { orders, craftsmen, recipes, ingredients } = get();
+      const selectedOrders = orders.filter((o) => orderIds.includes(o.id) && o.status !== 'completed');
+      const result = generateSandboxSchedule(
+        selectedOrders,
+        strategy,
+        orders,
+        craftsmen,
+        recipes,
+        ingredients
+      );
+      set({ sandboxResult: result });
+      return result;
+    },
 
-  applySandboxChanges: () => {
-    const { orders, sandboxResult } = get();
-    if (!sandboxResult) return;
+    applySandboxChanges: () => {
+      const { orders, sandboxResult } = get();
+      if (!sandboxResult) return;
 
-    const updatedOrders = applySandboxResult(orders, sandboxResult);
-    set({ orders: updatedOrders });
+      const updatedOrders = applySandboxResult(orders, sandboxResult);
+      commitStateChange({ orders: updatedOrders });
 
-    set(recalculateDerivedData(get()));
-    persistState(get());
+      set({
+        showSandboxModal: false,
+        sandboxSelectedOrderIds: [],
+        sandboxResult: null,
+      });
+    },
 
-    set({
-      showSandboxModal: false,
-      sandboxSelectedOrderIds: [],
-      sandboxResult: null,
-    });
-  },
+    clearSandbox: () => {
+      set({
+        sandboxSelectedOrderIds: [],
+        sandboxResult: null,
+        sandboxPriorityStrategy: 'priority_first',
+      });
+    },
 
-  clearSandbox: () => {
-    set({
-      sandboxSelectedOrderIds: [],
-      sandboxResult: null,
-      sandboxPriorityStrategy: 'priority_first',
-    });
-  },
+    resetToDefault: () => {
+      clearStorage();
+      const defaultData = getDefaultData();
+      const purchaseSuggestions = calculatePurchaseSuggestions(
+        defaultData.orders,
+        defaultData.ingredients,
+        defaultData.recipes
+      );
+      const purchaseDecisions: PurchaseDecision[] = [];
+      const purchasePlanItems = mergeSuggestionsWithDecisions(purchaseSuggestions, purchaseDecisions);
+      const supplierPurchaseGroups = groupBySupplier(purchasePlanItems);
 
-  resetToDefault: () => {
-    clearStorage();
-    const defaultData = getDefaultData();
-    const purchaseSuggestions = calculatePurchaseSuggestions(
-      defaultData.orders,
-      defaultData.ingredients,
-      defaultData.recipes
-    );
-    const purchaseDecisions: PurchaseDecision[] = [];
-    const purchasePlanItems = mergeSuggestionsWithDecisions(purchaseSuggestions, purchaseDecisions);
-    const supplierPurchaseGroups = groupBySupplier(purchasePlanItems);
+      set({
+        orders: defaultData.orders,
+        recipes: defaultData.recipes,
+        ingredients: defaultData.ingredients,
+        warnings: defaultData.warnings,
+        purchaseSuggestions,
+        purchaseDecisions,
+        purchasePlanItems,
+        supplierPurchaseGroups,
+        ...defaultData.viewPreferences,
+        selectedOrderId: null,
+        showCreateOrderModal: false,
+        showRecipeModal: false,
+        showPrintPreview: false,
+        showScheduleAdjustModal: false,
+        scheduleAdjustOrderId: null,
+        printOrderId: null,
+        editingRecipeId: null,
+        showIngredientGapModal: false,
+        ingredientGapOrderId: null,
+        showSandboxModal: false,
+        sandboxSelectedOrderIds: [],
+        sandboxPriorityStrategy: 'priority_first',
+        sandboxResult: null,
+      });
 
-    set({
-      orders: defaultData.orders,
-      recipes: defaultData.recipes,
-      ingredients: defaultData.ingredients,
-      warnings: defaultData.warnings,
-      purchaseSuggestions,
-      purchaseDecisions,
-      purchasePlanItems,
-      supplierPurchaseGroups,
-      ...defaultData.viewPreferences,
-      selectedOrderId: null,
-      showCreateOrderModal: false,
-      showRecipeModal: false,
-      showPrintPreview: false,
-      showScheduleAdjustModal: false,
-      scheduleAdjustOrderId: null,
-      printOrderId: null,
-      editingRecipeId: null,
-      showIngredientGapModal: false,
-      ingredientGapOrderId: null,
-      showSandboxModal: false,
-      sandboxSelectedOrderIds: [],
-      sandboxPriorityStrategy: 'priority_first',
-      sandboxResult: null,
-    });
-
-    console.info('[Store] Reset to default data completed');
-  },
-}));
+      console.info('[Store] Reset to default data completed');
+    },
+  };
+});
