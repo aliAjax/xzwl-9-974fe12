@@ -1,8 +1,41 @@
-import React, { useState, useMemo } from 'react';
-import { X, Plus, Calendar, User, Clock, AlertTriangle, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  X,
+  Plus,
+  Calendar,
+  User,
+  Clock,
+  AlertTriangle,
+  ChevronRight,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  Package,
+  Users,
+  Timer,
+  TrendingUp,
+  Info,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
 import { useAppStore } from '../../store/useAppStore';
-import { formatDateChinese, getToday, addDaysToDate, daysBetween, isDateBefore } from '../../utils/dateUtils';
-import { Priority, Recipe, STEP_ORDER, STEP_CONFIG, StepType } from '../../types';
+import {
+  formatDateChinese,
+  getToday,
+  addDaysToDate,
+  daysBetween,
+  isDateBefore,
+} from '../../utils/dateUtils';
+import {
+  Priority,
+  Recipe,
+  STEP_ORDER,
+  STEP_CONFIG,
+  StepType,
+  FeasibilityCheckResult,
+  FeasibilityIssue,
+} from '../../types';
+import { checkDeliveryFeasibility, getFeasibilityStatusColor, getFeasibilityStatusLabel } from '../../utils/feasibilityUtils';
 import { clsx } from 'clsx';
 
 interface StepSchedulePreview {
@@ -31,6 +64,9 @@ const CreateOrderModal: React.FC = () => {
     showCreateOrderModal,
     setShowCreateOrderModal,
     recipes,
+    ingredients,
+    craftsmen,
+    orders,
     createOrder,
     getRecipeById,
   } = useAppStore();
@@ -42,10 +78,39 @@ const CreateOrderModal: React.FC = () => {
   const [deliveryDate, setDeliveryDate] = useState(addDaysToDate(getToday(), 30));
   const [priority, setPriority] = useState<Priority>('medium');
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+  const [riskConfirmed, setRiskConfirmed] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['timeline', 'workload', 'ingredient', 'expiry']));
 
   const selectedRecipe = useMemo(() => {
     return recipeId ? getRecipeById(recipeId) : undefined;
   }, [recipeId, getRecipeById]);
+
+  const feasibilityCheck = useMemo((): FeasibilityCheckResult | null => {
+    if (!selectedRecipe || quantity <= 0 || !deliveryDate) return null;
+
+    return checkDeliveryFeasibility(
+      {
+        customerName: customerName || '临时客户',
+        recipeId,
+        quantity,
+        unit,
+        deliveryDate,
+        priority,
+      },
+      recipes,
+      ingredients,
+      craftsmen,
+      orders
+    );
+  }, [selectedRecipe, recipeId, quantity, unit, deliveryDate, priority, customerName, recipes, ingredients, craftsmen, orders]);
+
+  useEffect(() => {
+    if (feasibilityCheck && feasibilityCheck.status === 'feasible') {
+      setRiskConfirmed(true);
+    } else {
+      setRiskConfirmed(false);
+    }
+  }, [feasibilityCheck]);
 
   const estimatedProductionDays = useMemo(() => {
     if (!selectedRecipe) return 0;
@@ -105,9 +170,70 @@ const CreateOrderModal: React.FC = () => {
     c.toLowerCase().includes(customerName.toLowerCase())
   );
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
+
+  const getIssuesByCategory = (category: string): FeasibilityIssue[] => {
+    if (!feasibilityCheck) return [];
+    return feasibilityCheck.issues.filter((i) => i.category === category);
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'timeline':
+        return <Timer size={16} />;
+      case 'workload':
+        return <Users size={16} />;
+      case 'ingredient':
+        return <Package size={16} />;
+      case 'expiry':
+        return <TrendingUp size={16} />;
+      default:
+        return <Info size={16} />;
+    }
+  };
+
+  const getCategoryLabel = (category: string): string => {
+    switch (category) {
+      case 'timeline':
+        return '工期排期';
+      case 'workload':
+        return '工匠负载';
+      case 'ingredient':
+        return '原料库存';
+      case 'expiry':
+        return '有效期风险';
+      default:
+        return category;
+    }
+  };
+
+  const getLevelIcon = (level: string) => {
+    switch (level) {
+      case 'critical':
+        return <XCircle size={16} className="text-red-500" />;
+      case 'warning':
+        return <AlertTriangle size={16} className="text-amber-500" />;
+      case 'info':
+        return <Info size={16} className="text-blue-500" />;
+      default:
+        return <CheckCircle size={16} className="text-green-500" />;
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName || !recipeId || quantity <= 0 || !deliveryDate) return;
+    if (feasibilityCheck && feasibilityCheck.status !== 'feasible' && !riskConfirmed) return;
 
     createOrder({
       customerName,
@@ -124,6 +250,7 @@ const CreateOrderModal: React.FC = () => {
     setUnit('克');
     setDeliveryDate(addDaysToDate(getToday(), 30));
     setPriority('medium');
+    setRiskConfirmed(false);
   };
 
   const priorityConfig = {
@@ -140,7 +267,7 @@ const CreateOrderModal: React.FC = () => {
         className="absolute inset-0 bg-black/50 backdrop-blur-sm print:hidden"
         onClick={() => setShowCreateOrderModal(false)}
       />
-      <div className="relative w-full max-w-2xl max-h-[90vh] bg-incense-50 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up">
+      <div className="relative w-full max-w-3xl max-h-[90vh] bg-incense-50 rounded-xl shadow-2xl overflow-hidden flex flex-col animate-fade-in-up">
         <div className="flex items-center justify-between p-6 border-b border-incense-200 bg-white">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-incense-700 rounded-xl flex items-center justify-center">
@@ -150,7 +277,7 @@ const CreateOrderModal: React.FC = () => {
               <h2 className="text-xl font-bold font-song text-incense-800">
                 创建新订单
               </h2>
-              <p className="text-sm text-incense-500">填写订单信息，生成生产计划</p>
+              <p className="text-sm text-incense-500">填写订单信息，系统将自动检查交期可行性</p>
             </div>
           </div>
           <button
@@ -329,6 +456,160 @@ const CreateOrderModal: React.FC = () => {
             </div>
           </div>
 
+          {feasibilityCheck && selectedRecipe && (
+            <div className="card p-4 bg-white border-2" style={{ borderColor: getFeasibilityStatusColor(feasibilityCheck.status) }}>
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: getFeasibilityStatusColor(feasibilityCheck.status) + '20' }}
+                  >
+                    {feasibilityCheck.status === 'feasible' ? (
+                      <CheckCircle size={20} style={{ color: getFeasibilityStatusColor(feasibilityCheck.status) }} />
+                    ) : feasibilityCheck.status === 'risky' ? (
+                      <AlertCircle size={20} style={{ color: getFeasibilityStatusColor(feasibilityCheck.status) }} />
+                    ) : (
+                      <XCircle size={20} style={{ color: getFeasibilityStatusColor(feasibilityCheck.status) }} />
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-incense-800">交期可承诺检查</h4>
+                    <p className="text-sm" style={{ color: getFeasibilityStatusColor(feasibilityCheck.status) }}>
+                      {getFeasibilityStatusLabel(feasibilityCheck.status)} · 综合评分 {feasibilityCheck.overallScore} 分
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold" style={{ color: getFeasibilityStatusColor(feasibilityCheck.status) }}>
+                    {feasibilityCheck.overallScore}
+                  </div>
+                  <div className="text-xs text-incense-400">/ 100</div>
+                </div>
+              </div>
+
+              <p className="text-sm text-incense-600 mb-4 p-3 bg-incense-50 rounded-lg">
+                {feasibilityCheck.summary}
+              </p>
+
+              {feasibilityCheck.issues.length > 0 && (
+                <div className="space-y-3">
+                  {['timeline', 'workload', 'ingredient', 'expiry'].map((category) => {
+                    const issues = getIssuesByCategory(category);
+                    if (issues.length === 0) return null;
+
+                    const isExpanded = expandedCategories.has(category);
+                    const maxLevel = issues.reduce((max, i) => {
+                      if (i.level === 'critical') return 'critical';
+                      if (i.level === 'warning' && max !== 'critical') return 'warning';
+                      return max || i.level;
+                    }, '' as string);
+
+                    return (
+                      <div key={category} className="border border-incense-200 rounded-lg overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => toggleCategory(category)}
+                          className="w-full flex items-center justify-between p-3 bg-incense-50 hover:bg-incense-100 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            {getCategoryIcon(category)}
+                            <span className="font-medium text-incense-700">{getCategoryLabel(category)}</span>
+                            <span className={clsx(
+                              'text-xs px-2 py-0.5 rounded-full',
+                              maxLevel === 'critical' ? 'bg-red-100 text-red-600' :
+                              maxLevel === 'warning' ? 'bg-amber-100 text-amber-600' :
+                              'bg-blue-100 text-blue-600'
+                            )}>
+                              {issues.length} 项
+                            </span>
+                          </div>
+                          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        {isExpanded && (
+                          <div className="p-3 space-y-2">
+                            {issues.map((issue) => (
+                              <div key={issue.id} className="flex items-start gap-2 text-sm">
+                                {getLevelIcon(issue.level)}
+                                <div className="flex-1">
+                                  <p className={clsx(
+                                    'font-medium',
+                                    issue.level === 'critical' ? 'text-red-700' :
+                                    issue.level === 'warning' ? 'text-amber-700' :
+                                    'text-blue-700'
+                                  )}>
+                                    {issue.message}
+                                  </p>
+                                  {issue.detail && (
+                                    <p className="text-xs text-incense-500 mt-1">{issue.detail}</p>
+                                  )}
+                                  {issue.suggestion && (
+                                    <p className="text-xs text-incense-400 mt-1 flex items-center gap-1">
+                                      <Info size={12} />
+                                      建议：{issue.suggestion}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {feasibilityCheck.ingredients.details.length > 0 && (
+                <div className="mt-4">
+                  <h5 className="text-sm font-medium text-incense-700 mb-2">原料需求明细</h5>
+                  <div className="grid grid-cols-2 gap-2">
+                    {feasibilityCheck.ingredients.details.map((detail) => (
+                      <div
+                        key={detail.ingredientId}
+                        className={clsx(
+                          'p-2 rounded-lg text-xs',
+                          detail.gap > 0 ? 'bg-red-50 border border-red-200' :
+                          detail.hasExpiryRisk ? 'bg-amber-50 border border-amber-200' :
+                          'bg-green-50 border border-green-200'
+                        )}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-incense-700">{detail.ingredientName}</span>
+                          {detail.gap > 0 ? (
+                            <span className="text-red-600">缺口 {detail.gap}{detail.unit}</span>
+                          ) : detail.hasExpiryRisk ? (
+                            <span className="text-amber-600">临期 {detail.daysToExpiry}天</span>
+                          ) : (
+                            <span className="text-green-600">充足</span>
+                          )}
+                        </div>
+                        <div className="text-incense-500 mt-1">
+                          需 {detail.required}{detail.unit} / 库存 {detail.available}{detail.unit}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {feasibilityCheck.status !== 'feasible' && (
+                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={riskConfirmed}
+                      onChange={(e) => setRiskConfirmed(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 text-amber-600 border-amber-300 rounded focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-amber-800">
+                      我已了解上述风险，确认仍然创建此订单。我理解这可能导致交付延误、成本增加或其他问题。
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
+          )}
+
           {selectedRecipe && stepSchedules.length > 0 && (
             <div className="card p-4 bg-incense-100/50">
               <div className="flex items-center justify-between mb-4">
@@ -420,11 +701,11 @@ const CreateOrderModal: React.FC = () => {
           <button
             type="submit"
             onClick={handleSubmit}
-            disabled={!customerName || !recipeId || quantity <= 0 || !deliveryDate}
+            disabled={!customerName || !recipeId || quantity <= 0 || !deliveryDate || (feasibilityCheck && feasibilityCheck.status !== 'feasible' && !riskConfirmed)}
             className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Plus size={16} className="inline mr-1" />
-            创建订单
+            {feasibilityCheck && feasibilityCheck.status !== 'feasible' ? '确认风险并创建' : '创建订单'}
           </button>
         </div>
       </div>

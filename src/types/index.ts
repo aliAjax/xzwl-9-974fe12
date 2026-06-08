@@ -152,6 +152,59 @@ export interface CreateOrderData {
   priority: Priority;
 }
 
+export type FeasibilityStatus = 'feasible' | 'risky' | 'not_feasible';
+export type FeasibilityCategory = 'timeline' | 'workload' | 'ingredient' | 'expiry';
+
+export interface FeasibilityIssue {
+  id: string;
+  category: FeasibilityCategory;
+  level: 'info' | 'warning' | 'critical';
+  message: string;
+  detail?: string;
+  suggestion?: string;
+}
+
+export interface FeasibilityCheckResult {
+  status: FeasibilityStatus;
+  overallScore: number;
+  issues: FeasibilityIssue[];
+  timeline: {
+    estimatedStartDate: string;
+    estimatedCompletionDate: string;
+    deliveryDate: string;
+    productionDays: number;
+    daysToStart: number;
+    bufferDays: number;
+    isStartDatePast: boolean;
+  };
+  workload: {
+    craftsmanLoad: {
+      craftsmanId: string;
+      craftsmanName: string;
+      skills: StepType[];
+      loadLevel: 'low' | 'medium' | 'high';
+      availableDays: number;
+      totalTasks: number;
+    }[];
+    bottleneckSteps: string[];
+  };
+  ingredients: {
+    sufficient: boolean;
+    details: {
+      ingredientName: string;
+      ingredientId: string;
+      required: number;
+      available: number;
+      unit: string;
+      gap: number;
+      earliestExpiry: string;
+      daysToExpiry: number;
+      hasExpiryRisk: boolean;
+    }[];
+  };
+  summary: string;
+}
+
 export interface StepAdjustPreview {
   stepId: string;
   originalStartDate: string;
