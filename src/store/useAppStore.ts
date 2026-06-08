@@ -15,10 +15,18 @@ import {
   CustomerOrderSummary,
   RiskLevel,
   CustomerDeliveryBoardState,
+  PurchaseDecision,
+  PurchaseStatus,
 } from '../types';
 import { mockCraftsmen } from '../data/mockCraftsmen';
 import { calculateAllWarnings, mergeWarningsWithResolvedState } from '../utils/warningUtils';
-import { calculatePurchaseSuggestions } from '../utils/purchaseUtils';
+import {
+  calculatePurchaseSuggestions,
+  mergeSuggestionsWithDecisions,
+  groupBySupplier,
+  createPurchaseDecision,
+  cleanObsoleteDecisions,
+} from '../utils/purchaseUtils';
 import { getToday, addDaysToDate, isDateBefore, daysBetween } from '../utils/dateUtils';
 import { applyStepAdjustment, validateStepAdjustment } from '../utils/scheduleUtils';
 import {
@@ -50,6 +58,14 @@ const getInitialState = (): AppState => {
     data.recipes
   );
 
+  const purchaseDecisions = (data as unknown as { purchaseDecisions?: PurchaseDecision[] }).purchaseDecisions || [];
+  const cleanedDecisions = cleanObsoleteDecisions(
+    purchaseDecisions,
+    purchaseSuggestions.map((s) => s.ingredientId)
+  );
+  const purchasePlanItems = mergeSuggestionsWithDecisions(purchaseSuggestions, cleanedDecisions);
+  const supplierPurchaseGroups = groupBySupplier(purchasePlanItems);
+
   return {
     orders: data.orders,
     recipes: data.recipes,
@@ -73,6 +89,9 @@ const getInitialState = (): AppState => {
     editingRecipeId: null,
     copyingRecipeId: null,
     purchaseSuggestions,
+    purchaseDecisions: cleanedDecisions,
+    purchasePlanItems,
+    supplierPurchaseGroups,
     deliveryBoard: data.viewPreferences.deliveryBoard,
   };
 };
@@ -85,6 +104,7 @@ const saveState = (state: AppState) => {
     recipes: state.recipes,
     ingredients: state.ingredients,
     warnings: state.warnings,
+    purchaseDecisions: state.purchaseDecisions,
     viewPreferences: {
       currentView: state.currentView,
       selectedDate: state.selectedDate,
@@ -596,9 +616,79 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   recalculatePurchaseSuggestions: () => {
-    const { orders, ingredients, recipes } = get();
+    const { orders, ingredients, recipes, purchaseDecisions } = get();
     const suggestions = calculatePurchaseSuggestions(orders, ingredients, recipes);
-    set({ purchaseSuggestions: suggestions });
+    const cleanedDecisions = cleanObsoleteDecisions(
+      purchaseDecisions,
+      suggestions.map((s) => s.ingredientId)
+    );
+    const planItems = mergeSuggestionsWithDecisions(suggestions, cleanedDecisions);
+    const supplierGroups = groupBySupplier(planItems);
+    set({
+      purchaseSuggestions: suggestions,
+      purchaseDecisions: cleanedDecisions,
+      purchasePlanItems: planItems,
+      supplierPurchaseGroups: supplierGroups,
+    });
+  },
+
+  recalculatePurchasePlan: () => {
+    const { purchaseSuggestions, purchaseDecisions } = get();
+    const planItems = mergeSuggestionsWithDecisions(purchaseSuggestions, purchaseDecisions);
+    const supplierGroups = groupBySupplier(planItems);
+    set({
+      purchasePlanItems: planItems,
+      supplierPurchaseGroups: supplierGroups,
+    });
+  },
+
+  updatePurchaseQuantity: (ingredientId: string, quantity: number | null) => {
+    const { purchaseDecisions } = get();
+    const newDecisions = createPurchaseDecision(
+      ingredientId,
+      { adjustedQuantity: quantity },
+      purchaseDecisions
+    );
+    set({ purchaseDecisions: newDecisions });
+    get().recalculatePurchasePlan();
+    saveState(get());
+  },
+
+  updatePurchaseStatus: (ingredientId: string, status: PurchaseStatus) => {
+    const { purchaseDecisions } = get();
+    const newDecisions = createPurchaseDecision(
+      ingredientId,
+      { status },
+      purchaseDecisions
+    );
+    set({ purchaseDecisions: newDecisions });
+    get().recalculatePurchasePlan();
+    saveState(get());
+  },
+
+  updatePurchaseNotes: (ingredientId: string, notes: string) => {
+    const { purchaseDecisions } = get();
+    const newDecisions = createPurchaseDecision(
+      ingredientId,
+      { notes },
+      purchaseDecisions
+    );
+    set({ purchaseDecisions: newDecisions });
+    saveState(get());
+  },
+
+  clearPurchaseDecision: (ingredientId: string) => {
+    const { purchaseDecisions } = get();
+    const newDecisions = purchaseDecisions.filter((d) => d.ingredientId !== ingredientId);
+    set({ purchaseDecisions: newDecisions });
+    get().recalculatePurchasePlan();
+    saveState(get());
+  },
+
+  clearAllPurchaseDecisions: () => {
+    set({ purchaseDecisions: [] });
+    get().recalculatePurchasePlan();
+    saveState(get());
   },
 
   getOrderWarnings: (orderId: string) => {
@@ -682,6 +772,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       defaultData.ingredients,
       defaultData.recipes
     );
+    const purchaseDecisions: PurchaseDecision[] = [];
+    const purchasePlanItems = mergeSuggestionsWithDecisions(purchaseSuggestions, purchaseDecisions);
+    const supplierPurchaseGroups = groupBySupplier(purchasePlanItems);
 
     set({
       orders: defaultData.orders,
@@ -689,6 +782,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       ingredients: defaultData.ingredients,
       warnings: defaultData.warnings,
       purchaseSuggestions,
+      purchaseDecisions,
+      purchasePlanItems,
+      supplierPurchaseGroups,
       ...defaultData.viewPreferences,
       selectedOrderId: null,
       showCreateOrderModal: false,

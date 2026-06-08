@@ -92,6 +92,8 @@ export interface RecipeFormData {
   craftNotes: string;
 }
 
+export type PurchaseStatus = 'pending' | 'ordered' | 'skip';
+
 export interface PurchaseSuggestionIngredient {
   ingredientId: string;
   name: string;
@@ -106,6 +108,8 @@ export interface PurchaseSuggestionIngredient {
   gap: number;
   suggestedPurchase: number;
   priority: 'critical' | 'high' | 'medium' | 'low';
+  supplier: string;
+  unitPrice: number;
   relatedOrders: {
     orderId: string;
     orderNo: string;
@@ -115,6 +119,30 @@ export interface PurchaseSuggestionIngredient {
     deliveryDate: string;
     daysToDelivery: number;
   }[];
+}
+
+export interface PurchaseDecision {
+  ingredientId: string;
+  adjustedQuantity: number | null;
+  status: PurchaseStatus;
+  notes?: string;
+  updatedAt: string;
+}
+
+export interface PurchasePlanItem extends PurchaseSuggestionIngredient {
+  adjustedQuantity: number | null;
+  finalQuantity: number;
+  status: PurchaseStatus;
+  notes?: string;
+  decisionUpdatedAt?: string;
+}
+
+export interface SupplierPurchaseGroup {
+  supplier: string;
+  items: PurchasePlanItem[];
+  totalQuantity: number;
+  totalEstimatedCost: number;
+  priority: 'critical' | 'high' | 'medium' | 'low';
 }
 
 export interface AppState {
@@ -140,6 +168,9 @@ export interface AppState {
   editingRecipeId: string | null;
   copyingRecipeId: string | null;
   purchaseSuggestions: PurchaseSuggestionIngredient[];
+  purchaseDecisions: PurchaseDecision[];
+  purchasePlanItems: PurchasePlanItem[];
+  supplierPurchaseGroups: SupplierPurchaseGroup[];
   deliveryBoard: CustomerDeliveryBoardState;
 }
 
@@ -290,6 +321,12 @@ export interface AppActions {
   resolveWarning: (warningId: string) => void;
   recalculateWarnings: () => void;
   recalculatePurchaseSuggestions: () => void;
+  updatePurchaseQuantity: (ingredientId: string, quantity: number | null) => void;
+  updatePurchaseStatus: (ingredientId: string, status: PurchaseStatus) => void;
+  updatePurchaseNotes: (ingredientId: string, notes: string) => void;
+  clearPurchaseDecision: (ingredientId: string) => void;
+  clearAllPurchaseDecisions: () => void;
+  recalculatePurchasePlan: () => void;
   getOrderWarnings: (orderId: string) => Warning[];
   getRecipeById: (recipeId: string) => Recipe | undefined;
   getOrdersByStep: (stepType: StepType) => Order[];
@@ -324,6 +361,9 @@ export interface AppState {
   editingRecipeId: string | null;
   copyingRecipeId: string | null;
   purchaseSuggestions: PurchaseSuggestionIngredient[];
+  purchaseDecisions: PurchaseDecision[];
+  purchasePlanItems: PurchasePlanItem[];
+  supplierPurchaseGroups: SupplierPurchaseGroup[];
 }
 
 export const STEP_CONFIG: Record<StepType, { name: string; icon: string; color: string }> = {

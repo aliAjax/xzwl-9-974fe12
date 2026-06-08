@@ -1,11 +1,11 @@
-import { Order, Recipe, IngredientBatch, Warning, ViewType, CustomerDeliveryBoardState } from '../types';
+import { Order, Recipe, IngredientBatch, Warning, ViewType, CustomerDeliveryBoardState, PurchaseDecision } from '../types';
 import { mockOrders } from '../data/mockOrders';
 import { mockRecipes } from '../data/mockRecipes';
 import { mockIngredients } from '../data/mockIngredients';
 import { calculateAllWarnings, mergeWarningsWithResolvedState } from './warningUtils';
 
 const STORAGE_KEY = 'xzwl-app-state';
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 export interface PersistentViewPreferences {
   currentView: ViewType;
@@ -24,6 +24,7 @@ export interface PersistentAppData {
   recipes: Recipe[];
   ingredients: IngredientBatch[];
   warnings: Warning[];
+  purchaseDecisions: PurchaseDecision[];
   viewPreferences: PersistentViewPreferences;
   savedAt: string;
 }
@@ -33,6 +34,7 @@ export interface DefaultDataResult {
   recipes: Recipe[];
   ingredients: IngredientBatch[];
   warnings: Warning[];
+  purchaseDecisions: PurchaseDecision[];
   viewPreferences: PersistentViewPreferences;
 }
 
@@ -44,8 +46,9 @@ type StoredViewPreferences = Partial<
   deliveryBoard?: Partial<CustomerDeliveryBoardState>;
 };
 
-type StoredAppData = Partial<Omit<PersistentAppData, 'viewPreferences'>> & {
+type StoredAppData = Partial<Omit<PersistentAppData, 'viewPreferences' | 'purchaseDecisions'>> & {
   viewPreferences?: StoredViewPreferences;
+  purchaseDecisions?: PurchaseDecision[];
 };
 
 const defaultViewPreferences: PersistentViewPreferences = {
@@ -87,6 +90,7 @@ const migrations: Record<number, MigrationFn> = {
       recipes: d.recipes || [],
       ingredients: d.ingredients || [],
       warnings: d.warnings || [],
+      purchaseDecisions: d.purchaseDecisions || [],
       savedAt: d.savedAt || new Date().toISOString(),
     } as PersistentAppData;
   },
@@ -101,6 +105,22 @@ const migrations: Record<number, MigrationFn> = {
       recipes: d.recipes || [],
       ingredients: d.ingredients || [],
       warnings: d.warnings || [],
+      purchaseDecisions: d.purchaseDecisions || [],
+      savedAt: d.savedAt || new Date().toISOString(),
+    } as PersistentAppData;
+  },
+  2: (data: unknown) => {
+    console.log('[Storage] Running migration v2 -> v3');
+    const d = data as StoredAppData;
+    return {
+      ...d,
+      version: 3,
+      viewPreferences: normalizeViewPreferences(d.viewPreferences),
+      orders: d.orders || [],
+      recipes: d.recipes || [],
+      ingredients: d.ingredients || [],
+      warnings: d.warnings || [],
+      purchaseDecisions: d.purchaseDecisions || [],
       savedAt: d.savedAt || new Date().toISOString(),
     } as PersistentAppData;
   },
@@ -113,6 +133,7 @@ export const getDefaultData = (): DefaultDataResult => {
     recipes: mockRecipes,
     ingredients: mockIngredients,
     warnings: initialWarnings,
+    purchaseDecisions: [],
     viewPreferences: { ...defaultViewPreferences },
   };
 };
@@ -158,12 +179,14 @@ export const loadFromStorage = (): DefaultDataResult | null => {
     const mergedWarnings = mergeWarningsWithResolvedState(recalculatedWarnings, existingResolved);
 
     console.log(`[Storage] Recalculated warnings: ${recalculatedWarnings.length} total, ${existingResolved.length} resolved states preserved`);
+    console.log(`[Storage] Loaded ${data.purchaseDecisions?.length || 0} purchase decisions`);
 
     return {
       orders: data.orders,
       recipes: data.recipes,
       ingredients: data.ingredients,
       warnings: mergedWarnings,
+      purchaseDecisions: data.purchaseDecisions || [],
       viewPreferences: normalizeViewPreferences(data.viewPreferences),
     };
   } catch (error) {

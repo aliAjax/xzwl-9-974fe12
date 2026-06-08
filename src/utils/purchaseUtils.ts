@@ -1,4 +1,4 @@
-import { Order, Recipe, IngredientBatch, PurchaseSuggestionIngredient, Priority } from '../types';
+import { Order, Recipe, IngredientBatch, PurchaseSuggestionIngredient, Priority, PurchaseDecision, PurchasePlanItem, SupplierPurchaseGroup } from '../types';
 import { getToday, daysBetween } from './dateUtils';
 
 interface PendingDemand {
@@ -173,6 +173,8 @@ export const calculatePurchaseSuggestions = (
         gap: Number(gap.toFixed(2)),
         suggestedPurchase,
         priority,
+        supplier: representativeBatch.supplier,
+        unitPrice: representativeBatch.unitPrice,
         relatedOrders: demand.orders.sort((a, b) => a.daysToDelivery - b.daysToDelivery),
       });
     }
@@ -187,4 +189,97 @@ export const calculatePurchaseSuggestions = (
   });
 
   return suggestions;
+};
+
+export const mergeSuggestionsWithDecisions = (
+  suggestions: PurchaseSuggestionIngredient[],
+  decisions: PurchaseDecision[]
+): PurchasePlanItem[] => {
+  const decisionMap = new Map(decisions.map((d) => [d.ingredientId, d]));
+
+  return suggestions.map((suggestion) => {
+    const decision = decisionMap.get(suggestion.ingredientId);
+    const adjustedQuantity = decision?.adjustedQuantity ?? null;
+    const finalQuantity = adjustedQuantity !== null ? adjustedQuantity : suggestion.suggestedPurchase;
+
+    return {
+      ...suggestion,
+      adjustedQuantity,
+      finalQuantity,
+      status: decision?.status ?? 'pending',
+      notes: decision?.notes,
+      decisionUpdatedAt: decision?.updatedAt,
+    };
+  });
+};
+
+export const groupBySupplier = (
+  planItems: PurchasePlanItem[]
+): SupplierPurchaseGroup[] => {
+  const supplierMap = new Map<string, PurchasePlanItem[]>();
+
+  planItems.forEach((item) => {
+    if (item.status === 'skip') return;
+    const existing = supplierMap.get(item.supplier) || [];
+    supplierMap.set(item.supplier, [...existing, item]);
+  });
+
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+
+  const groups: SupplierPurchaseGroup[] = [];
+  supplierMap.forEach((items, supplier) => {
+    const totalQuantity = items.reduce((sum, item) => sum + item.finalQuantity, 0);
+    const totalEstimatedCost = items.reduce(
+      (sum, item) => sum + item.finalQuantity * item.unitPrice,
+      0
+    );
+
+    const highestPriority = items.reduce(
+      (highest, item) =>
+        priorityOrder[item.priority] < priorityOrder[highest] ? item.priority : highest,
+      'low' as const
+    );
+
+    groups.push({
+      supplier,
+      items: items.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]),
+      totalQuantity: Number(totalQuantity.toFixed(2)),
+      totalEstimatedCost: Number(totalEstimatedCost.toFixed(2)),
+      priority: highestPriority,
+    });
+  });
+
+  return groups.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+};
+
+export const createPurchaseDecision = (
+  ingredientId: string,
+  updates: Partial<Pick<PurchaseDecision, 'adjustedQuantity' | 'status' | 'notes'>>,
+  existingDecisions: PurchaseDecision[]
+): PurchaseDecision[] => {
+  const existingIndex = existingDecisions.findIndex((d) => d.ingredientId === ingredientId);
+  const existing = existingDecisions[existingIndex];
+
+  const updatedDecision: PurchaseDecision = {
+    ingredientId,
+    adjustedQuantity: updates.adjustedQuantity ?? existing?.adjustedQuantity ?? null,
+    status: updates.status ?? existing?.status ?? 'pending',
+    notes: updates.notes ?? existing?.notes,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (existingIndex >= 0) {
+    const newDecisions = [...existingDecisions];
+    newDecisions[existingIndex] = updatedDecision;
+    return newDecisions;
+  }
+
+  return [...existingDecisions, updatedDecision];
+};
+
+export const cleanObsoleteDecisions = (
+  decisions: PurchaseDecision[],
+  currentSuggestionIds: string[]
+): PurchaseDecision[] => {
+  return decisions.filter((d) => currentSuggestionIds.includes(d.ingredientId));
 };
