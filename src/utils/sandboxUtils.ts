@@ -4,7 +4,6 @@ import {
   Recipe,
   IngredientBatch,
   StepType,
-  STEP_ORDER,
   SandboxPriorityStrategy,
   SandboxResult,
   SandboxOrderPreview,
@@ -23,7 +22,7 @@ import {
   isDateSame,
   formatDateChinese,
 } from './dateUtils';
-import { analyzeAllCraftsmenWorkload, sortCraftsmenForAssignment } from './workloadUtils';
+import { analyzeAllCraftsmenWorkload } from './workloadUtils';
 import { analyzeCraftsmanWorkload } from './workloadUtils';
 
 const generateConflictId = (): string =>
@@ -212,14 +211,18 @@ export const detectOverload = (
           .map((t) => `${t.stepType} (${t.orderId})`)
           .join('、');
 
-        conflicts.push({
-          id: generateConflictId(),
-          type: 'overload',
-          level,
-          message: `工匠日负载过高`,
-          detail: `${craftsman.name} 在 ${formatDateChinese(date)} 被分配了 ${tasks.length} 个任务：${taskDescriptions}`,
-          craftsmanId: craftsman.id,
-          suggestion: '建议调整任务分配日期，避免同一日安排过多任务',
+        tasks.forEach((task) => {
+          conflicts.push({
+            id: generateConflictId(),
+            type: 'overload',
+            level,
+            message: `工匠日负载过高`,
+            detail: `${craftsman.name} 在 ${formatDateChinese(date)} 被分配了 ${tasks.length} 个任务：${taskDescriptions}`,
+            craftsmanId: craftsman.id,
+            orderId: task.orderId,
+            stepId: task.stepId,
+            suggestion: '建议调整任务分配日期，避免同一日安排过多任务',
+          });
         });
       }
     });

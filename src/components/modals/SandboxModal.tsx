@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Clock,
   Users,
-  Package,
   Calendar,
   User,
   Shield,
@@ -23,15 +22,10 @@ import {
   SandboxOrderPreview,
   SandboxStepPreview,
   STEP_CONFIG,
-  STEP_ORDER,
 } from '../../types';
 import {
   getToday,
-  addDaysToDate,
   daysBetween,
-  isDateBefore,
-  isDateAfter,
-  isDateSame,
   formatDateChinese,
 } from '../../utils/dateUtils';
 import { Badge } from '../common/Badge';
@@ -100,7 +94,6 @@ const getConflictTypeName = (type: SandboxConflict['type']) => {
 const SandboxModal: React.FC = () => {
   const {
     orders,
-    craftsmen,
     showSandboxModal,
     sandboxSelectedOrderIds,
     sandboxPriorityStrategy,
@@ -119,10 +112,6 @@ const SandboxModal: React.FC = () => {
   const uncompletedOrders = useMemo(() => {
     return orders.filter((o) => o.status !== 'completed');
   }, [orders]);
-
-  const selectedOrders = useMemo(() => {
-    return uncompletedOrders.filter((o) => sandboxSelectedOrderIds.includes(o.id));
-  }, [uncompletedOrders, sandboxSelectedOrderIds]);
 
   const handleClose = () => {
     setShowSandboxModal(false);
