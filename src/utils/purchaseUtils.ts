@@ -1,72 +1,28 @@
-import { type Order, type Recipe, type IngredientBatch, type PurchaseSuggestionIngredient, type Priority, type PurchaseDecision, type PurchasePlanItem, type SupplierPurchaseGroup } from '../types';
+import { type Order, type Recipe, type IngredientBatch, type PurchaseSuggestionIngredient, type PurchaseDecision, type PurchasePlanItem, type SupplierPurchaseGroup, type Priority } from '../types';
 import { getToday, daysBetween } from './dateUtils';
+import { buildIngredientMaps, calculateEffectiveStock, calculateIngredientDemand } from './ingredientUtils';
 
-interface PendingDemand {
-  total: number;
-  orders: {
-    orderId: string;
-    orderNo: string;
-    customerName: string;
-    quantity: number;
-    priority: Priority;
-    deliveryDate: string;
-    daysToDelivery: number;
-  }[];
+interface RelatedOrder {
+  orderId: string;
+  orderNo: string;
+  customerName: string;
+  quantity: number;
+  priority: Priority;
+  deliveryDate: string;
+  daysToDelivery: number;
 }
-
-const calculateIngredientDemand = (
-  ingredientName: string,
-  ingredientIdToName: Map<string, string>,
-  orders: Order[],
-  recipes: Recipe[],
-  today: string
-): PendingDemand => {
-  let total = 0;
-  const relatedOrders: PendingDemand['orders'] = [];
-
-  orders.forEach((order) => {
-    if (order.status === 'completed') return;
-
-    const recipe = recipes.find((r) => r.id === order.recipeId);
-    if (!recipe) return;
-
-    const matchingIngredients = recipe.ingredients.filter((ri) => {
-      const name = ingredientIdToName.get(ri.ingredientId);
-      return name === ingredientName;
-    });
-
-    if (matchingIngredients.length === 0) return;
-
-    const totalRecipeQuantity = matchingIngredients.reduce((sum, ri) => sum + ri.quantity, 0);
-    const demand = (totalRecipeQuantity / 100) * order.quantity;
-    total += demand;
-
-    const daysToDelivery = daysBetween(today, order.deliveryDate);
-    relatedOrders.push({
-      orderId: order.id,
-      orderNo: order.orderNo,
-      customerName: order.customerName,
-      quantity: order.quantity,
-      priority: order.priority,
-      deliveryDate: order.deliveryDate,
-      daysToDelivery,
-    });
-  });
-
-  return { total, orders: relatedOrders };
-};
 
 const calculatePriority = (
   gap: number,
   safetyStock: number,
   daysToExpiry: number,
-  relatedOrders: PendingDemand['orders']
+  relatedOrders: RelatedOrder[]
 ): 'critical' | 'high' | 'medium' | 'low' => {
   if (gap <= 0) return 'low';
 
   const gapRatio = gap / safetyStock;
-  const hasHighPriorityOrder = relatedOrders.some((o) => o.priority === 'high');
-  const hasUrgentDelivery = relatedOrders.some((o) => o.daysToDelivery <= 15);
+  const hasHighPriorityOrder = relatedOrders.some((o: RelatedOrder) => o.priority === 'high');
+  const hasUrgentDelivery = relatedOrders.some((o: RelatedOrder) => o.daysToDelivery <= 15);
   const expiringSoon = daysToExpiry <= 30 && daysToExpiry > 0;
   const expired = daysToExpiry <= 0;
 
@@ -114,28 +70,13 @@ export const calculatePurchaseSuggestions = (
   const today = getToday();
   const suggestions: PurchaseSuggestionIngredient[] = [];
 
-  const ingredientIdToName = new Map<string, string>();
-  ingredients.forEach((ing) => {
-    ingredientIdToName.set(ing.id, ing.name);
-  });
+  const { ingredientIdToName, ingredientNameToBatches } = buildIngredientMaps(ingredients);
 
-  const ingredientMap = new Map<string, typeof ingredients[0][]>();
-  ingredients.forEach((ing) => {
-    const existing = ingredientMap.get(ing.name) || [];
-    ingredientMap.set(ing.name, [...existing, ing]);
-  });
-
-  ingredientMap.forEach((batches, ingredientName) => {
+  ingredientNameToBatches.forEach((batches, ingredientName) => {
     const representativeBatch = batches[0];
     const ingredientId = representativeBatch.id;
 
-    const totalCurrentStock = batches.reduce((sum, batch) => {
-      const daysToExpiry = daysBetween(today, batch.expiryDate);
-      if (daysToExpiry <= 0) return sum;
-      if (daysToExpiry <= 7) return sum + batch.quantity * 0.3;
-      if (daysToExpiry <= 30) return sum + batch.quantity * 0.7;
-      return sum + batch.quantity;
-    }, 0);
+    const totalCurrentStock = calculateEffectiveStock(batches, today);
 
     const earliestExpiry = batches.reduce((earliest, batch) => {
       return daysBetween(today, batch.expiryDate) < daysBetween(today, earliest)

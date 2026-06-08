@@ -6,6 +6,7 @@ import {
   type DeliveryCommitmentSummary,
 } from '../types';
 import { daysBetween, isDateBefore } from './dateUtils';
+import { buildIngredientMaps, calculateEffectiveStock, calculateRequiredQuantity } from './ingredientUtils';
 
 export const calculateDeliveryCommitment = (
   customerOrders: Order[],
@@ -51,27 +52,11 @@ export const calculateDeliveryCommitment = (
     .sort((a, b) => b.orderCount - a.orderCount)
     .slice(0, 3);
 
-  const ingredientIdToName = new Map<string, string>();
-  ingredients.forEach((ing) => {
-    ingredientIdToName.set(ing.id, ing.name);
-  });
-
-  const ingredientMap = new Map<string, typeof ingredients[0][]>();
-  ingredients.forEach((ing) => {
-    const existing = ingredientMap.get(ing.name) || [];
-    ingredientMap.set(ing.name, [...existing, ing]);
-  });
+  const { ingredientIdToName, ingredientNameToBatches } = buildIngredientMaps(ingredients);
 
   const ingredientStockMap = new Map<string, number>();
-  ingredientMap.forEach((batches, name) => {
-    const totalStock = batches.reduce((sum, batch) => {
-      const daysToExpiry = daysBetween(today, batch.expiryDate);
-      if (daysToExpiry <= 0) return sum;
-      if (daysToExpiry <= 7) return sum + batch.quantity * 0.3;
-      if (daysToExpiry <= 30) return sum + batch.quantity * 0.7;
-      return sum + batch.quantity;
-    }, 0);
-    ingredientStockMap.set(name, totalStock);
+  ingredientNameToBatches.forEach((batches, name) => {
+    ingredientStockMap.set(name, calculateEffectiveStock(batches, today));
   });
 
   const ingredientDemandMap = new Map<string, { totalRequired: number; orderNos: string[] }>();
@@ -85,7 +70,7 @@ export const calculateDeliveryCommitment = (
       const ingredientName = ingredientIdToName.get(ri.ingredientId);
       if (!ingredientName) return;
 
-      const required = (ri.quantity / 100) * order.quantity;
+      const required = calculateRequiredQuantity(ri.ingredientId, order.quantity, recipe);
       const existing = ingredientDemandMap.get(ingredientName) || { totalRequired: 0, orderNos: [] };
       ingredientDemandMap.set(ingredientName, {
         totalRequired: existing.totalRequired + required,
@@ -108,7 +93,7 @@ export const calculateDeliveryCommitment = (
     const gap = demand.totalRequired - available;
 
     if (gap > 0) {
-      const batches = ingredientMap.get(ingredientName) || [];
+      const batches = ingredientNameToBatches.get(ingredientName) || [];
       materialShortageDetails.push({
         ingredientName,
         gap: Number(gap.toFixed(2)),

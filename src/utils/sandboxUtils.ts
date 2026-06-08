@@ -24,6 +24,7 @@ import {
 } from './dateUtils';
 import { analyzeAllCraftsmenWorkload } from './workloadUtils';
 import { analyzeCraftsmanWorkload } from './workloadUtils';
+import { buildIngredientMaps, calculateEffectiveStock, calculateRequiredQuantity, getIngredientStockInfo } from './ingredientUtils';
 
 const generateConflictId = (): string =>
   `conflict-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -258,47 +259,17 @@ export const detectMaterialShortage = (
   const conflicts: SandboxConflict[] = [];
   if (!recipe) return conflicts;
 
-  const today = getToday();
-
-  const ingredientMap = new Map<string, IngredientBatch[]>();
-  ingredients.forEach((ing) => {
-    const existing = ingredientMap.get(ing.name) || [];
-    ingredientMap.set(ing.name, [...existing, ing]);
-  });
-
-  const ingredientIdToName = new Map<string, string>();
-  ingredients.forEach((ing) => {
-    ingredientIdToName.set(ing.id, ing.name);
-  });
+  const { ingredientIdToName, ingredientNameToBatches } = buildIngredientMaps(ingredients);
 
   recipe.ingredients.forEach((recipeIng) => {
     const ingredientName = ingredientIdToName.get(recipeIng.ingredientId);
     if (!ingredientName) return;
 
-    const batches = ingredientMap.get(ingredientName) || [];
-    const required = (recipeIng.quantity / 100) * order.quantity;
+    const batches = ingredientNameToBatches.get(ingredientName) || [];
+    const required = calculateRequiredQuantity(recipeIng.ingredientId, order.quantity, recipe);
 
-    let totalAvailable = 0;
-    let earliestExpiry = '';
-    let minDaysToExpiry = Infinity;
-
-    batches.forEach((batch) => {
-      const daysToExpiry = daysBetween(newStartDate, batch.expiryDate);
-      if (daysToExpiry > 0) {
-        if (daysToExpiry <= 7) {
-          totalAvailable += batch.quantity * 0.3;
-        } else if (daysToExpiry <= 30) {
-          totalAvailable += batch.quantity * 0.7;
-        } else {
-          totalAvailable += batch.quantity;
-        }
-      }
-      const daysToExpiryFromToday = daysBetween(today, batch.expiryDate);
-      if (daysToExpiryFromToday < minDaysToExpiry) {
-        minDaysToExpiry = daysToExpiryFromToday;
-        earliestExpiry = batch.expiryDate;
-      }
-    });
+    const totalAvailable = calculateEffectiveStock(batches, newStartDate);
+    const { earliestExpiry, minDaysToExpiry } = getIngredientStockInfo(batches);
 
     const gap = required - totalAvailable;
 

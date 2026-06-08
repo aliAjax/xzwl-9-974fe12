@@ -10,15 +10,9 @@ import {
   type Order,
   type Recipe,
   type RecipeFormData,
-  type ProductionStep,
   type StepUpdateData,
-  type CustomerOrderSummary,
-  type RiskLevel,
-  type CustomerDeliveryBoardState,
   type PurchaseDecision,
   type PurchaseStatus,
-  type OrderMaterialGap,
-  type MaterialGapDetail,
 } from '../types';
 import { mockCraftsmen } from '../data/mockCraftsmen';
 import { calculateAllWarnings, mergeWarningsWithResolvedState } from '../utils/warningUtils';
@@ -29,7 +23,7 @@ import {
   createPurchaseDecision,
   cleanObsoleteDecisions,
 } from '../utils/purchaseUtils';
-import { getToday, addDaysToDate, isDateBefore, daysBetween } from '../utils/dateUtils';
+import { getToday, addDaysToDate } from '../utils/dateUtils';
 import { applyStepAdjustment, validateStepAdjustment } from '../utils/scheduleUtils';
 import {
   loadFromStorage,
@@ -37,22 +31,23 @@ import {
   getDefaultData,
   clearStorage,
 } from '../utils/storage';
-import { calculateDeliveryCommitment } from '../utils/deliveryUtils';
-import {
-  analyzeCraftsmanWorkload,
-  analyzeAllCraftsmenWorkload,
-  sortCraftsmenForAssignment,
-} from '../utils/workloadUtils';
-import {
-  type CraftsmanWorkload,
-  type WorkloadAnalysisOptions,
-  type SandboxPriorityStrategy,
-  type SandboxResult,
-} from '../types';
 import {
   generateSandboxSchedule,
   applySandboxResult,
 } from '../utils/sandboxUtils';
+import {
+  selectOrderWarnings,
+  selectRecipeById,
+  selectOrdersByStep,
+  selectOrdersByDate,
+  selectCraftsmanTasks,
+  selectCraftsmanWorkload,
+  selectAllCraftsmenWorkload,
+  selectSortedCraftsmenForAssignment,
+  selectOrderMaterialGap,
+  selectCustomerOrderSummaries,
+  selectCustomerOrderSummary,
+} from './selectors';
 
 type AppStore = AppState & AppActions;
 
@@ -113,7 +108,7 @@ const getInitialState = (): AppState => {
 
 const initialState = getInitialState();
 
-const saveState = (state: AppState) => {
+const persistState = (state: AppState) => {
   saveToStorage({
     orders: state.orders,
     recipes: state.recipes,
@@ -133,6 +128,30 @@ const saveState = (state: AppState) => {
   });
 };
 
+const recalculateDerivedData = (state: AppState): Partial<AppState> => {
+  const { orders, ingredients, recipes, purchaseDecisions } = state;
+
+  const newWarnings = calculateAllWarnings(orders, ingredients, recipes);
+  const existingResolved = state.warnings.filter((w) => w.isResolved);
+  const mergedWarnings = mergeWarningsWithResolvedState(newWarnings, existingResolved);
+
+  const newPurchaseSuggestions = calculatePurchaseSuggestions(orders, ingredients, recipes);
+  const cleanedDecisions = cleanObsoleteDecisions(
+    purchaseDecisions,
+    newPurchaseSuggestions.map((s) => s.ingredientId)
+  );
+  const newPurchasePlanItems = mergeSuggestionsWithDecisions(newPurchaseSuggestions, cleanedDecisions);
+  const newSupplierGroups = groupBySupplier(newPurchasePlanItems);
+
+  return {
+    warnings: mergedWarnings,
+    purchaseSuggestions: newPurchaseSuggestions,
+    purchaseDecisions: cleanedDecisions,
+    purchasePlanItems: newPurchasePlanItems,
+    supplierPurchaseGroups: newSupplierGroups,
+  };
+};
+
 const generateOrderId = (): string => `order-${Date.now().toString().slice(-6)}`;
 const generateOrderNo = (): string => {
   const today = getToday();
@@ -148,45 +167,45 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setCurrentView: (view: ViewType) => {
     set({ currentView: view });
-    saveState(get());
+    persistState(get());
   },
 
   setSelectedDate: (date: string) => {
     set({ selectedDate: date });
-    saveState(get());
+    persistState(get());
   },
 
   setSelectedOrderId: (id: string | null) => set({ selectedOrderId: id }),
 
   setShowIngredientPanel: (show: boolean) => {
     set({ showIngredientPanel: show });
-    saveState(get());
+    persistState(get());
   },
 
   setShowWarningPanel: (show: boolean) => {
     set({ showWarningPanel: show });
-    saveState(get());
+    persistState(get());
   },
 
   setShowCreateOrderModal: (show: boolean) => set({ showCreateOrderModal: show }),
 
   setShowRecipePanel: (show: boolean) => {
     set({ showRecipePanel: show });
-    saveState(get());
+    persistState(get());
   },
 
   setShowRecipeModal: (show: boolean) => set({ showRecipeModal: show }),
 
   setShowSchedulePanel: (show: boolean) => {
     set({ showSchedulePanel: show });
-    saveState(get());
+    persistState(get());
   },
 
   setShowPrintPreview: (show: boolean) => set({ showPrintPreview: show }),
 
   setShowPurchaseSuggestion: (show: boolean) => {
     set({ showPurchaseSuggestion: show });
-    saveState(get());
+    persistState(get());
   },
 
   setPrintOrderId: (id: string | null) => set({ printOrderId: id }),
@@ -203,21 +222,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({
       deliveryBoard: { ...state.deliveryBoard, showCompletedOrders: show },
     }));
-    saveState(get());
+    persistState(get());
   },
 
-  setSortBy: (sortBy: CustomerDeliveryBoardState['sortBy']) => {
+  setSortBy: (sortBy: AppState['deliveryBoard']['sortBy']) => {
     set((state) => ({
       deliveryBoard: { ...state.deliveryBoard, sortBy },
     }));
-    saveState(get());
+    persistState(get());
   },
 
-  setFilterRiskLevel: (level: RiskLevel | 'all') => {
+  setFilterRiskLevel: (level: AppState['deliveryBoard']['filterRiskLevel']) => {
     set((state) => ({
       deliveryBoard: { ...state.deliveryBoard, filterRiskLevel: level },
     }));
-    saveState(get());
+    persistState(get());
   },
 
   toggleCustomerExpand: (customerName: string) => {
@@ -233,202 +252,25 @@ export const useAppStore = create<AppStore>((set, get) => ({
         },
       };
     });
-    saveState(get());
+    persistState(get());
   },
 
   setShowThisWeekOnly: (show: boolean) => {
     set((state) => ({
       deliveryBoard: { ...state.deliveryBoard, showThisWeekOnly: show },
     }));
-    saveState(get());
+    persistState(get());
   },
 
   setShowIngredientGapModal: (show: boolean) => set({ showIngredientGapModal: show }),
 
   setIngredientGapOrderId: (id: string | null) => set({ ingredientGapOrderId: id }),
 
-  getOrderMaterialGap: (orderId: string): OrderMaterialGap | null => {
-    const { orders, recipes, ingredients } = get();
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return null;
+  getOrderMaterialGap: (orderId: string) => selectOrderMaterialGap(get(), orderId),
 
-    const recipe = recipes.find((r) => r.id === order.recipeId);
-    if (!recipe) return null;
+  getCustomerOrderSummaries: () => selectCustomerOrderSummaries(get()),
 
-    const today = getToday();
-
-    const ingredientIdToName = new Map<string, string>();
-    ingredients.forEach((ing) => {
-      ingredientIdToName.set(ing.id, ing.name);
-    });
-
-    const ingredientMap = new Map<string, typeof ingredients[0][]>();
-    ingredients.forEach((ing) => {
-      const existing = ingredientMap.get(ing.name) || [];
-      ingredientMap.set(ing.name, [...existing, ing]);
-    });
-
-    const gaps: MaterialGapDetail[] = [];
-
-    recipe.ingredients.forEach((ri) => {
-      const ingredientName = ingredientIdToName.get(ri.ingredientId);
-      if (!ingredientName) return;
-
-      const required = (ri.quantity / 100) * order.quantity;
-      const batches = ingredientMap.get(ingredientName) || [];
-
-      const available = batches.reduce((sum, batch) => {
-        const daysToExpiry = daysBetween(today, batch.expiryDate);
-        if (daysToExpiry <= 0) return sum;
-        if (daysToExpiry <= 7) return sum + batch.quantity * 0.3;
-        if (daysToExpiry <= 30) return sum + batch.quantity * 0.7;
-        return sum + batch.quantity;
-      }, 0);
-
-      const gap = required - available;
-      if (gap > 0) {
-        const relatedOrders = orders
-          .filter((o) => o.status !== 'completed' && o.id !== orderId)
-          .map((o) => {
-            const r = recipes.find((rec) => rec.id === o.recipeId);
-            if (!r) return null;
-            const ing = r.ingredients.find((i) => i.ingredientId === ri.ingredientId);
-            if (!ing) return null;
-            const reqQty = (ing.quantity / 100) * o.quantity;
-            return {
-              orderId: o.id,
-              orderNo: o.orderNo,
-              requiredQuantity: Number(reqQty.toFixed(2)),
-              deliveryDate: o.deliveryDate,
-              priority: o.priority,
-            };
-          })
-          .filter(Boolean) as MaterialGapDetail['relatedOrders'];
-
-        gaps.push({
-          ingredientId: ri.ingredientId,
-          ingredientName,
-          required: Number(required.toFixed(2)),
-          available: Number(available.toFixed(2)),
-          unit: batches[0]?.unit || 'g',
-          gap: Number(gap.toFixed(2)),
-          relatedOrders,
-        });
-      }
-    });
-
-    return {
-      orderId: order.id,
-      orderNo: order.orderNo,
-      recipeName: recipe.name,
-      gaps,
-      totalGapCount: gaps.length,
-    };
-  },
-
-  getCustomerOrderSummaries: (): CustomerOrderSummary[] => {
-    const { orders, getOrderWarnings, warnings, ingredients, recipes } = get();
-    const customerMap = new Map<string, Order[]>();
-
-    orders.forEach((order) => {
-      const existing = customerMap.get(order.customerName) || [];
-      customerMap.set(order.customerName, [...existing, order]);
-    });
-
-    const summaries: CustomerOrderSummary[] = [];
-    const today = getToday();
-
-    customerMap.forEach((customerOrders, customerName) => {
-      const totalOrders = customerOrders.length;
-      const pendingOrders = customerOrders.filter((o) => o.status === 'pending').length;
-      const inProductionOrders = customerOrders.filter((o) => o.status === 'in_production').length;
-      const completedOrders = customerOrders.filter((o) => o.status === 'completed').length;
-
-      const overdueOrders = customerOrders.filter(
-        (o) => o.status !== 'completed' && isDateBefore(o.deliveryDate, today)
-      ).length;
-
-      const highPriorityOrders = customerOrders.filter(
-        (o) => o.priority === 'high' && o.status !== 'completed'
-      ).length;
-
-      const activeOrders = customerOrders.filter((o) => o.status !== 'completed');
-      const sortedByDelivery = [...activeOrders].sort((a, b) =>
-        a.deliveryDate.localeCompare(b.deliveryDate)
-      );
-      const earliestDeliveryDate =
-        sortedByDelivery.length > 0 ? sortedByDelivery[0].deliveryDate : '';
-      const latestDeliveryDate =
-        sortedByDelivery.length > 0
-          ? sortedByDelivery[sortedByDelivery.length - 1].deliveryDate
-          : '';
-
-      const totalSteps = customerOrders.reduce(
-        (sum, o) => sum + o.steps.length,
-        0
-      );
-      const completedSteps = customerOrders.reduce(
-        (sum, o) => sum + o.steps.filter((s) => s.status === 'completed').length,
-        0
-      );
-      const overallProgress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-
-      let riskLevel: RiskLevel = 'low';
-      if (overdueOrders > 0) {
-        riskLevel = 'critical';
-      } else if (highPriorityOrders > 0) {
-        const hasNearDelivery = activeOrders.some((o) => {
-          const days = daysBetween(today, o.deliveryDate);
-          return days <= 7;
-        });
-        if (hasNearDelivery) {
-          riskLevel = 'high';
-        } else {
-          riskLevel = 'medium';
-        }
-      } else {
-        const hasWarnings = activeOrders.some((o) => {
-          const orderWarnings = getOrderWarnings(o.id);
-          return orderWarnings.some((w) => w.level === 'critical' || w.level === 'warning');
-        });
-        if (hasWarnings) {
-          riskLevel = 'medium';
-        }
-      }
-
-      const deliveryCommitment = calculateDeliveryCommitment(
-        customerOrders,
-        warnings,
-        ingredients,
-        recipes,
-        today
-      );
-
-      summaries.push({
-        customerName,
-        totalOrders,
-        pendingOrders,
-        inProductionOrders,
-        completedOrders,
-        overdueOrders,
-        highPriorityOrders,
-        earliestDeliveryDate,
-        latestDeliveryDate,
-        overallProgress,
-        riskLevel,
-        orders: customerOrders,
-        orderIds: customerOrders.map((o) => o.id),
-        deliveryCommitment,
-      });
-    });
-
-    return summaries;
-  },
-
-  getCustomerOrderSummary: (customerName: string): CustomerOrderSummary | undefined => {
-    const summaries = get().getCustomerOrderSummaries();
-    return summaries.find((s) => s.customerName === customerName);
-  },
+  getCustomerOrderSummary: (customerName: string) => selectCustomerOrderSummary(get(), customerName),
 
   createRecipe: (data: RecipeFormData): Recipe => {
     const recipeId = generateRecipeId();
@@ -449,7 +291,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       editingRecipeId: null,
     }));
 
-    saveState(get());
+    set(recalculateDerivedData(get()));
+    persistState(get());
     return newRecipe;
   },
 
@@ -470,10 +313,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       editingRecipeId: null,
     }));
 
-    get().recalculateWarnings();
-    get().recalculatePurchaseSuggestions();
-    saveState(get());
-
+    set(recalculateDerivedData(get()));
+    persistState(get());
     return updatedRecipe;
   },
 
@@ -481,9 +322,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) => ({
       recipes: state.recipes.filter((r) => r.id !== id),
     }));
-    get().recalculateWarnings();
-    get().recalculatePurchaseSuggestions();
-    saveState(get());
+    set(recalculateDerivedData(get()));
+    persistState(get());
   },
 
   createOrder: (data: CreateOrderData): Order => {
@@ -491,8 +331,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const orderNo = generateOrderNo();
     const today = getToday();
 
-    const { getRecipeById } = get();
-    const recipe = getRecipeById(data.recipeId);
+    const recipe = get().getRecipeById(data.recipeId);
 
     const stepDurations: Record<StepType, number> = {
       kneading: 2,
@@ -556,10 +395,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       showCreateOrderModal: false,
     }));
 
-    get().recalculateWarnings();
-    get().recalculatePurchaseSuggestions();
-    saveState(get());
-
+    set(recalculateDerivedData(get()));
+    persistState(get());
     return newOrder;
   },
 
@@ -576,9 +413,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
         };
       }),
     }));
-    get().recalculateWarnings();
-    get().recalculatePurchaseSuggestions();
-    saveState(get());
+    set(recalculateDerivedData(get()));
+    persistState(get());
   },
 
   assignStepToCraftsman: (orderId: string, stepId: string, craftsmanName: string) => {
@@ -594,7 +430,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         };
       }),
     }));
-    saveState(get());
+    persistState(get());
   },
 
   moveOrderToStep: (orderId: string, targetStepType: StepType) => {
@@ -660,9 +496,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }),
     }));
 
-    get().recalculateWarnings();
-    get().recalculatePurchaseSuggestions();
-    saveState(get());
+    set(recalculateDerivedData(get()));
+    persistState(get());
   },
 
   updateProductionStep: (orderId: string, stepId: string, updates: StepUpdateData) => {
@@ -685,9 +520,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }),
     }));
 
-    get().recalculateWarnings();
-    get().recalculatePurchaseSuggestions();
-    saveState(get());
+    set(recalculateDerivedData(get()));
+    persistState(get());
   },
 
   completeOrder: (orderId: string) => {
@@ -707,9 +541,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
         };
       }),
     }));
-    get().recalculateWarnings();
-    get().recalculatePurchaseSuggestions();
-    saveState(get());
+    set(recalculateDerivedData(get()));
+    persistState(get());
   },
 
   resolveWarning: (warningId: string) => {
@@ -718,7 +551,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         w.id === warningId ? { ...w, isResolved: true } : w
       ),
     }));
-    saveState(get());
+    persistState(get());
   },
 
   recalculateWarnings: () => {
@@ -765,7 +598,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     );
     set({ purchaseDecisions: newDecisions });
     get().recalculatePurchasePlan();
-    saveState(get());
+    persistState(get());
   },
 
   updatePurchaseStatus: (ingredientId: string, status: PurchaseStatus) => {
@@ -777,7 +610,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     );
     set({ purchaseDecisions: newDecisions });
     get().recalculatePurchasePlan();
-    saveState(get());
+    persistState(get());
   },
 
   updatePurchaseNotes: (ingredientId: string, notes: string) => {
@@ -788,7 +621,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       purchaseDecisions
     );
     set({ purchaseDecisions: newDecisions });
-    saveState(get());
+    persistState(get());
   },
 
   clearPurchaseDecision: (ingredientId: string) => {
@@ -796,97 +629,40 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const newDecisions = purchaseDecisions.filter((d) => d.ingredientId !== ingredientId);
     set({ purchaseDecisions: newDecisions });
     get().recalculatePurchasePlan();
-    saveState(get());
+    persistState(get());
   },
 
   clearAllPurchaseDecisions: () => {
     set({ purchaseDecisions: [] });
     get().recalculatePurchasePlan();
-    saveState(get());
+    persistState(get());
   },
 
-  getOrderWarnings: (orderId: string) => {
-    return get().warnings.filter((w) => w.relatedId === orderId && !w.isResolved);
-  },
+  getOrderWarnings: (orderId: string) => selectOrderWarnings(get(), orderId),
 
-  getRecipeById: (recipeId: string) => {
-    return get().recipes.find((r) => r.id === recipeId);
-  },
+  getRecipeById: (recipeId: string) => selectRecipeById(get(), recipeId),
 
-  getOrdersByStep: (stepType: StepType) => {
-    return get().orders.filter((order) => {
-      if (order.status === 'completed') return false;
-      if (order.status === 'pending') return stepType === STEP_ORDER[0];
-      const currentStep = order.steps.find((s) => s.status === 'in_progress');
-      return currentStep?.stepType === stepType;
-    });
-  },
+  getOrdersByStep: (stepType: StepType) => selectOrdersByStep(get(), stepType),
 
-  getOrdersByDate: (date: string) => {
-    return get().orders.filter((order) => {
-      return order.steps.some(
-        (step) =>
-          step.status === 'in_progress' &&
-          step.startDate <= date &&
-          step.endDate >= date
-      );
-    });
-  },
+  getOrdersByDate: (date: string) => selectOrdersByDate(get(), date),
 
-  getCraftsmanTasks: (craftsmanName: string) => {
-    const tasks: { order: Order; step: ProductionStep }[] = [];
-    get().orders.forEach((order) => {
-      order.steps.forEach((step) => {
-        if (step.assignee === craftsmanName) {
-          tasks.push({ order, step });
-        }
-      });
-    });
-    return tasks;
-  },
+  getCraftsmanTasks: (craftsmanName: string) => selectCraftsmanTasks(get(), craftsmanName),
 
-  getCraftsmanWorkload: (craftsmanId: string, options: WorkloadAnalysisOptions = {}): CraftsmanWorkload => {
-    const { craftsmen, orders } = get();
-    const craftsman = craftsmen.find((c) => c.id === craftsmanId);
-    if (!craftsman) {
-      return {
-        craftsmanId,
-        craftsmanName: '',
-        taskCount: 0,
-        totalDurationDays: 0,
-        stepTypes: [],
-        tasks: [],
-        workloadLevel: 'low',
-        isResting: false,
-        hasMatchingSkill: true,
-      };
-    }
-    return analyzeCraftsmanWorkload(craftsman, orders, options);
-  },
+  getCraftsmanWorkload: (craftsmanId: string, options) => selectCraftsmanWorkload(get(), craftsmanId, options),
 
-  getAllCraftsmenWorkload: (options: WorkloadAnalysisOptions = {}): CraftsmanWorkload[] => {
-    const { craftsmen, orders } = get();
-    return analyzeAllCraftsmenWorkload(craftsmen, orders, options);
-  },
+  getAllCraftsmenWorkload: (options) => selectAllCraftsmenWorkload(get(), options),
 
-  getSortedCraftsmenForAssignment: (requiredSkill: StepType): CraftsmanWorkload[] => {
-    const { craftsmen, orders } = get();
-    const workloads = analyzeAllCraftsmenWorkload(craftsmen, orders, {
-      daysAhead: 7,
-      requiredSkill,
-    });
-    return sortCraftsmenForAssignment(workloads);
-  },
+  getSortedCraftsmenForAssignment: (requiredSkill: StepType) => selectSortedCraftsmenForAssignment(get(), requiredSkill),
 
   setShowSandboxModal: (show: boolean) => set({ showSandboxModal: show }),
 
   setSandboxSelectedOrderIds: (orderIds: string[]) => set({ sandboxSelectedOrderIds: orderIds }),
 
-  setSandboxPriorityStrategy: (strategy: SandboxPriorityStrategy) => set({ sandboxPriorityStrategy: strategy }),
+  setSandboxPriorityStrategy: (strategy) => set({ sandboxPriorityStrategy: strategy }),
 
-  setSandboxResult: (result: SandboxResult | null) => set({ sandboxResult: result }),
+  setSandboxResult: (result) => set({ sandboxResult: result }),
 
-  generateSandboxPreview: (orderIds: string[], strategy: SandboxPriorityStrategy): SandboxResult => {
+  generateSandboxPreview: (orderIds, strategy) => {
     const { orders, craftsmen, recipes, ingredients } = get();
     const selectedOrders = orders.filter((o) => orderIds.includes(o.id) && o.status !== 'completed');
     const result = generateSandboxSchedule(
@@ -902,15 +678,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   applySandboxChanges: () => {
-    const { orders, sandboxResult, recalculateWarnings, recalculatePurchaseSuggestions } = get();
+    const { orders, sandboxResult } = get();
     if (!sandboxResult) return;
 
     const updatedOrders = applySandboxResult(orders, sandboxResult);
     set({ orders: updatedOrders });
 
-    recalculateWarnings();
-    recalculatePurchaseSuggestions();
-    saveState(get());
+    set(recalculateDerivedData(get()));
+    persistState(get());
 
     set({
       showSandboxModal: false,
