@@ -262,7 +262,7 @@ export const createPurchaseDecision = (
 
   const updatedDecision: PurchaseDecision = {
     ingredientId,
-    adjustedQuantity: updates.adjustedQuantity ?? existing?.adjustedQuantity ?? null,
+    adjustedQuantity: updates.adjustedQuantity !== undefined ? updates.adjustedQuantity : (existing?.adjustedQuantity ?? null),
     status: updates.status ?? existing?.status ?? 'pending',
     notes: updates.notes ?? existing?.notes,
     updatedAt: new Date().toISOString(),
