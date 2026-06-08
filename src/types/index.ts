@@ -178,6 +178,7 @@ export interface DeliveryImpactSummary {
   daysRelativeToDelivery: number;
   isAheadOfDelivery: boolean;
   isOnSchedule: boolean;
+  completionShiftDays: number;
   affectedSteps: {
     stepId: string;
     stepName: string;

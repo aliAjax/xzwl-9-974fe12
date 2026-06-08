@@ -87,6 +87,40 @@ export const calculateDeliveryWarnings = (order: Order): Warning[] => {
   return warnings;
 };
 
+export const calculateScheduleDeliveryWarnings = (order: Order): Warning[] => {
+  const warnings: Warning[] = [];
+
+  const lastStep = order.steps[order.steps.length - 1];
+  const plannedCompletionDate = lastStep.endDate;
+  const deliveryDate = order.deliveryDate;
+
+  const delayDays = daysBetween(deliveryDate, plannedCompletionDate);
+
+  if (delayDays > 0) {
+    const level: WarningLevel = delayDays > 7 ? 'critical' : delayDays > 3 ? 'warning' : 'info';
+
+    warnings.push({
+      id: generateId(),
+      type: 'delivery',
+      level,
+      message: `订单 ${order.orderNo} 按计划 ${formatDateChinese(plannedCompletionDate)} 完成，比交付期 ${formatDateChinese(deliveryDate)} 晚 ${delayDays} 天`,
+      relatedId: order.id,
+      relatedType: 'order',
+      createdAt: formatISO(new Date(), { representation: 'complete' }),
+      isResolved: false,
+    });
+  }
+
+  return warnings;
+};
+
+export const calculateScheduleAllWarnings = (order: Order, recipe: Recipe | undefined): Warning[] => {
+  return [
+    ...calculateDryingWarnings(order, recipe),
+    ...calculateScheduleDeliveryWarnings(order),
+  ];
+};
+
 export const calculateIngredientWarnings = (ingredient: IngredientBatch): Warning[] => {
   const warnings: Warning[] = [];
 
@@ -172,6 +206,7 @@ const getWarningSubtype = (warning: Warning): string => {
   if (warning.type === 'delivery') {
     if (warning.message.includes('预计还需')) return 'schedule-delay';
     if (warning.message.includes('距交付期仅剩')) return 'deadline-near';
+    if (warning.message.includes('按计划')) return 'plan-delay';
   }
 
   if (warning.type === 'ingredient') return 'stock-low';

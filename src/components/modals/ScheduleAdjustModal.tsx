@@ -357,14 +357,25 @@ const ScheduleAdjustModal: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="bg-white p-3 rounded-lg border border-incense-200">
                   <div className="text-xs text-incense-500 mb-1">预计完工日期</div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-incense-800">
                       {formatDateChinese(preview.deliveryImpact.newCompletionDate)}
                     </span>
                     {preview.deliveryImpact.newCompletionDate !== preview.deliveryImpact.originalCompletionDate && (
-                      <span className="text-xs text-incense-400">
-                        (原: {formatDateChinese(preview.deliveryImpact.originalCompletionDate)})
-                      </span>
+                      <>
+                        <span className="text-xs text-incense-400">
+                          (原: {formatDateChinese(preview.deliveryImpact.originalCompletionDate)})
+                        </span>
+                        <span className={clsx(
+                          'text-xs px-2 py-0.5 rounded-full font-medium',
+                          preview.deliveryImpact.completionShiftDays > 0
+                            ? 'bg-red-50 text-warning-critical'
+                            : 'bg-green-50 text-bamboo-600'
+                        )}>
+                          {preview.deliveryImpact.completionShiftDays > 0 ? '+' : ''}
+                          {preview.deliveryImpact.completionShiftDays}天
+                        </span>
+                      </>
                     )}
                   </div>
                 </div>

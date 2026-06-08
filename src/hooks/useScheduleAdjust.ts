@@ -4,7 +4,7 @@ import {
   calculateStepAdjustPreview,
   validateStepAdjustment,
 } from '../utils/scheduleUtils';
-import { calculateDryingWarnings, calculateDeliveryWarnings } from '../utils/warningUtils';
+import { calculateScheduleAllWarnings } from '../utils/warningUtils';
 
 interface UseScheduleAdjustOptions {
   order: Order | undefined;
@@ -43,10 +43,7 @@ export const useScheduleAdjust = ({
     }
 
     const recipe = recipes.find((r) => r.id === order.recipeId);
-    const originalWarnings = [
-      ...calculateDryingWarnings(order, recipe),
-      ...calculateDeliveryWarnings(order),
-    ];
+    const originalWarnings = calculateScheduleAllWarnings(order, recipe);
 
     const defaultSteps = order.steps.map((step) => ({
       stepId: step.id,
@@ -77,6 +74,7 @@ export const useScheduleAdjust = ({
         daysRelativeToDelivery: 0,
         isAheadOfDelivery: false,
         isOnSchedule: true,
+        completionShiftDays: 0,
         affectedSteps: [],
       },
     };
