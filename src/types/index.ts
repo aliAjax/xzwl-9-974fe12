@@ -218,6 +218,9 @@ export interface AppActions {
   getOrdersByStep: (stepType: StepType) => Order[];
   getOrdersByDate: (date: string) => Order[];
   getCraftsmanTasks: (craftsmanId: string) => { order: Order; step: ProductionStep }[];
+  getCraftsmanWorkload: (craftsmanId: string, options?: WorkloadAnalysisOptions) => CraftsmanWorkload;
+  getAllCraftsmenWorkload: (options?: WorkloadAnalysisOptions) => CraftsmanWorkload[];
+  getSortedCraftsmenForAssignment: (requiredSkill: StepType) => CraftsmanWorkload[];
   resetToDefault: () => void;
 }
 
@@ -288,4 +291,21 @@ export interface CustomerDeliveryBoardActions {
   toggleCustomerExpand: (customerName: string) => void;
   getCustomerOrderSummaries: () => CustomerOrderSummary[];
   getCustomerOrderSummary: (customerName: string) => CustomerOrderSummary | undefined;
+}
+
+export interface CraftsmanWorkload {
+  craftsmanId: string;
+  craftsmanName: string;
+  taskCount: number;
+  totalDurationDays: number;
+  stepTypes: StepType[];
+  tasks: { order: Order; step: ProductionStep }[];
+  workloadLevel: 'low' | 'medium' | 'high';
+  isResting: boolean;
+  hasMatchingSkill: boolean;
+}
+
+export interface WorkloadAnalysisOptions {
+  daysAhead?: number;
+  requiredSkill?: StepType;
 }

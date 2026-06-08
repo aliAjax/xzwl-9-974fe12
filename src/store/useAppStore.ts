@@ -27,6 +27,15 @@ import {
   getDefaultData,
   clearStorage,
 } from '../utils/storage';
+import {
+  analyzeCraftsmanWorkload,
+  analyzeAllCraftsmenWorkload,
+  sortCraftsmenForAssignment,
+} from '../utils/workloadUtils';
+import {
+  CraftsmanWorkload,
+  WorkloadAnalysisOptions,
+} from '../types';
 
 type AppStore = AppState & AppActions;
 
@@ -304,7 +313,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       recipes: [...state.recipes, newRecipe],
       showRecipeModal: false,
       editingRecipeId: null,
-      copyingRecipeId: null,
     }));
 
     saveState(get());
@@ -326,7 +334,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       recipes: state.recipes.map((r) => (r.id === id ? updatedRecipe : r)),
       showRecipeModal: false,
       editingRecipeId: null,
-      copyingRecipeId: null,
     }));
 
     get().recalculateWarnings();
@@ -634,6 +641,39 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return tasks;
   },
 
+  getCraftsmanWorkload: (craftsmanId: string, options: WorkloadAnalysisOptions = {}): CraftsmanWorkload => {
+    const { craftsmen, orders } = get();
+    const craftsman = craftsmen.find((c) => c.id === craftsmanId);
+    if (!craftsman) {
+      return {
+        craftsmanId,
+        craftsmanName: '',
+        taskCount: 0,
+        totalDurationDays: 0,
+        stepTypes: [],
+        tasks: [],
+        workloadLevel: 'low',
+        isResting: false,
+        hasMatchingSkill: true,
+      };
+    }
+    return analyzeCraftsmanWorkload(craftsman, orders, options);
+  },
+
+  getAllCraftsmenWorkload: (options: WorkloadAnalysisOptions = {}): CraftsmanWorkload[] => {
+    const { craftsmen, orders } = get();
+    return analyzeAllCraftsmenWorkload(craftsmen, orders, options);
+  },
+
+  getSortedCraftsmenForAssignment: (requiredSkill: StepType): CraftsmanWorkload[] => {
+    const { craftsmen, orders } = get();
+    const workloads = analyzeAllCraftsmenWorkload(craftsmen, orders, {
+      daysAhead: 7,
+      requiredSkill,
+    });
+    return sortCraftsmenForAssignment(workloads);
+  },
+
   resetToDefault: () => {
     clearStorage();
     const defaultData = getDefaultData();
@@ -658,7 +698,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       scheduleAdjustOrderId: null,
       printOrderId: null,
       editingRecipeId: null,
-      copyingRecipeId: null,
     });
 
     console.log('[Store] Reset to default data completed');
